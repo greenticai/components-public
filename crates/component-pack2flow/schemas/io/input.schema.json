@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "component-pack2flow handle input",
+  "type": "object",
+  "required": ["target"],
+  "properties": {
+    "target": {
+      "type": "object",
+      "required": ["flow"],
+      "properties": {
+        "flow": { "type": "string", "minLength": 1 },
+        "node": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "params": { "type": "object", "additionalProperties": true },
+    "hints": { "type": "object", "additionalProperties": true },
+    "payload": { "type": "object", "additionalProperties": true },
+    "routing_hints": { "type": "object", "additionalProperties": true },
+    "max_redirects": { "type": "integer", "minimum": 0, "default": 3 },
+    "reason": { "type": "string" }
+  },
+  "additionalProperties": true
+}

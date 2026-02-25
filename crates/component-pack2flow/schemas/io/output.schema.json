@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "component-pack2flow handle output",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "greentic_control": {
+      "type": "object",
+      "required": ["v", "action", "target"],
+      "properties": {
+        "v": { "type": "integer", "const": 1 },
+        "action": { "type": "string", "enum": ["jump"] },
+        "operation": { "type": "string" },
+        "target": {
+          "type": "object",
+          "required": ["flow"],
+          "properties": {
+            "flow": { "type": "string" },
+            "node": { "type": ["string", "null"] }
+          },
+          "additionalProperties": true
+        },
+        "params": { "type": "object", "additionalProperties": true },
+        "hints": { "type": "object", "additionalProperties": true },
+        "max_redirects": { "type": "integer", "minimum": 0 },
+        "reason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "error": {
+      "type": "object",
+      "required": ["code"],
+      "properties": {
+        "code": { "type": "string" },
+        "text": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

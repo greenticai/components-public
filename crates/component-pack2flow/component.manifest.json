@@ -1,0 +1,137 @@
+{
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "id": "ai.greentic.component-pack2flow",
+  "name": "component-pack2flow",
+  "version": "0.1.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
+  "operations": [
+    {
+      "name": "handle_message",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "component-pack2flow handle input",
+        "type": "object",
+        "required": ["target"],
+        "properties": {
+          "target": {
+            "type": "object",
+            "required": ["flow"],
+            "properties": {
+              "flow": { "type": "string", "minLength": 1 },
+              "node": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "params": { "type": "object", "additionalProperties": true },
+          "hints": { "type": "object", "additionalProperties": true },
+          "payload": { "type": "object", "additionalProperties": true },
+          "routing_hints": { "type": "object", "additionalProperties": true },
+          "max_redirects": { "type": "integer", "minimum": 0, "default": 3 },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "component-pack2flow handle output",
+        "type": "object",
+        "required": [],
+        "properties": {
+          "greentic_control": {
+            "type": "object",
+            "required": ["v", "action", "target"],
+            "properties": {
+              "v": { "type": "integer", "const": 1 },
+              "action": { "type": "string", "enum": ["jump"] },
+              "operation": { "type": "string" },
+              "target": {
+                "type": "object",
+                "required": ["flow"],
+                "properties": {
+                  "flow": { "type": "string" },
+                  "node": { "type": ["string", "null"] }
+                },
+                "additionalProperties": true
+              },
+              "params": { "type": "object", "additionalProperties": true },
+              "hints": { "type": "object", "additionalProperties": true },
+              "max_redirects": { "type": "integer", "minimum": 0 },
+              "reason": { "type": ["string", "null"] }
+            },
+            "additionalProperties": true
+          },
+          "error": {
+            "type": "object",
+            "required": ["code"],
+            "properties": {
+              "code": { "type": "string" },
+              "text": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ],
+  "default_operation": "handle_message",
+  "config_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "supports": ["messaging"],
+  "profiles": {
+    "default": "stateless",
+    "supported": ["stateless"]
+  },
+  "secret_requirements": [],
+  "capabilities": {
+    "wasi": {
+      "filesystem": {
+        "mode": "none",
+        "mounts": []
+      },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "messaging": {
+        "inbound": true,
+        "outbound": true
+      },
+      "telemetry": {
+        "scope": "node"
+      },
+      "secrets": {
+        "required": []
+      }
+    }
+  },
+  "limits": {
+    "memory_mb": 128,
+    "wall_time_ms": 1000
+  },
+  "artifacts": {
+    "component_wasm": "target/wasm32-wasip2/release/component_pack2flow.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "dev_flows": {
+    "default": {
+      "format": "flow-ir-json",
+      "graph": {
+        "nodes": [
+          { "id": "start", "type": "start" },
+          { "id": "end", "type": "end" }
+        ],
+        "edges": [
+          { "from": "start", "to": "end" }
+        ]
+      }
+    }
+  }
+}

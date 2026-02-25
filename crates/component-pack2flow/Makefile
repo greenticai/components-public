@@ -1,0 +1,29 @@
+.PHONY: build test lint check flows wasm
+
+BUILD_FLAGS ?=
+
+default: build
+
+build:
+	greentic-dev component build --manifest ./component.manifest.json $(BUILD_FLAGS)
+
+flows:
+	greentic-component flow update
+
+wasm:
+	if ! cargo component --version >/dev/null 2>&1; then \
+		echo "cargo-component is required for component@0.6.0 builds"; \
+		echo "install with: cargo install cargo-component --locked"; \
+		exit 1; \
+	fi
+	cargo component build --release --target wasm32-wasip2
+
+check:
+	greentic-dev component doctor target/wasm32-wasip2/release/component_pack2flow.wasm --manifest ./component.manifest.json
+
+lint:
+	cargo fmt --all
+	cargo clippy --workspace --all-targets -- -D warnings
+
+test:
+	cargo test --workspace --all-targets

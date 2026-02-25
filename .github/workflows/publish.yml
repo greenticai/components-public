@@ -1,0 +1,88 @@
+name: Publish Component
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.91.0
+      - name: fmt
+        run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.91.0
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.91.0
+      - name: test
+        run: make test
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.91.0
+          targets: wasm32-wasip2
+
+      - name: Install cargo-component
+        run: cargo install cargo-component --locked
+
+      - name: Install oras
+        uses: oras-project/setup-oras@v1
+
+      - name: Build wasm
+        run: |
+          make -C crates/component-pack2flow wasm
+
+      - name: Resolve component version
+        id: version
+        run: |
+          VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name=="component-pack2flow") | .version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push wasm to GHCR
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO="ghcr.io/${OWNER}/component/component-pack2flow"
+          ARTIFACT="crates/component-pack2flow/target/wasm32-wasip2/release/component_pack2flow.wasm"
+
+          oras push "${REPO}:${VERSION}" \
+            --artifact-type "application/wasm" \
+            "${ARTIFACT}:application/wasm"
+
+          oras push "${REPO}:latest" \
+            --artifact-type "application/wasm" \
+            "${ARTIFACT}:application/wasm"
