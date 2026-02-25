@@ -60,7 +60,14 @@ jobs:
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO="ghcr.io/${OWNER}/component/component-pack2flow"
-          ARTIFACT="crates/component-pack2flow/target/wasm32-wasip2/release/component_pack2flow.wasm"
+          ARTIFACT="target/wasm32-wasip2/release/component_pack2flow.wasm"
+          if [ ! -f "${ARTIFACT}" ]; then
+            ALT_ARTIFACT="crates/component-pack2flow/target/wasm32-wasip2/release/component_pack2flow.wasm"
+            if [ -f "${ALT_ARTIFACT}" ]; then
+              ARTIFACT="${ALT_ARTIFACT}"
+            fi
+          fi
+          test -f "${ARTIFACT}"
 
           oras push "${REPO}:${VERSION}" \
             --artifact-type "application/wasm" \
