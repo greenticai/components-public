@@ -1,0 +1,31 @@
+[package]
+name = "component-http"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "HTTP client component with blocking and streaming support for Greentic"
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.component]
+package = "greentic:http"
+
+[package.metadata.component.target]
+path = "wit/http"
+world = "component-v0-v6-v0"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = { version = "0.53", default-features = false, features = ["macros", "realloc"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

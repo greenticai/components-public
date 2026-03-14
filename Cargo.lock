@@ -115,6 +115,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "component-http"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "component-pack2flow"
 version = "0.1.0"
 dependencies = [
