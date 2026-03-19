@@ -1497,7 +1497,7 @@ mod tests {
             SqlParam::Integer { value: 42 }
         ));
         assert!(matches!(
-            value_to_param(&json!(3.14)),
+            value_to_param(&json!(3.5)),
             SqlParam::Real { value: _ }
         ));
         assert!(matches!(

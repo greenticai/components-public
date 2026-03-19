@@ -34,6 +34,7 @@ mod bindings {
 }
 
 use bindings::greentic::http::http_client as client;
+#[cfg(not(test))]
 use bindings::greentic::secrets_store::secrets_store;
 #[cfg(not(test))]
 use bindings::greentic::telemetry::logger_api;
