@@ -1,0 +1,31 @@
+[package]
+name = "component-msg2events"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Bridge component for routing messaging to events flows in Greentic"
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.component]
+package = "greentic:msg2events"
+
+[package.metadata.component.target]
+path = "wit/msg2events"
+world = "component-v0-v6-v0"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = { version = "0.53", default-features = false, features = ["macros", "realloc"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
