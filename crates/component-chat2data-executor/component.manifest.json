@@ -1,0 +1,123 @@
+{
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "id": "ai.greentic.component-chat2data-executor",
+  "name": "component-chat2data-executor",
+  "version": "0.1.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
+  "operations": [
+    {
+      "name": "execute",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Execute translated query",
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "data": { "type": "object" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "execute_github",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "data": { "type": "object" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "execute_mcp",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "data": { "type": "object" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  ],
+  "default_operation": "execute",
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "github_token": { "type": "string", "secret": true },
+      "github_api_url": { "type": "string", "default": "https://api.github.com" },
+      "timeout_ms": { "type": "integer", "default": 30000 },
+      "max_result_size_bytes": { "type": "integer", "default": 1048576 }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "supports": ["messaging"],
+  "profiles": {
+    "default": "stateless",
+    "supported": ["stateless"]
+  },
+  "secret_requirements": [
+    {
+      "name": "GITHUB_TOKEN",
+      "required": false,
+      "description": "GitHub API token for GitHub queries"
+    }
+  ],
+  "capabilities": {
+    "wasi": {
+      "filesystem": { "mode": "none", "mounts": [] },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "http_client": { "enabled": true },
+      "telemetry": { "scope": "node" },
+      "secrets": { "required": [] }
+    }
+  },
+  "limits": {
+    "memory_mb": 128,
+    "wall_time_ms": 60000
+  },
+  "artifacts": {
+    "component_wasm": "../../target/wasm32-wasip2/release/component_chat2data_executor.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}
