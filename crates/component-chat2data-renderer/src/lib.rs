@@ -1177,7 +1177,7 @@ mod tests {
         assert_eq!(format_number(42.0), "42");
         assert_eq!(format_number(1234.0), "1.2K");
         assert_eq!(format_number(1234567.0), "1.2M");
-        assert_eq!(format_number(3.14159), "3.14");
+        assert_eq!(format_number(3.56789), "3.57");
     }
 
     #[test]
