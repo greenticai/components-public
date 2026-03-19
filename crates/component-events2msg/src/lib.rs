@@ -220,7 +220,8 @@ impl bindings::exports::greentic::component::qa::Guest for Component {
 
         if mode == bindings::exports::greentic::component::qa::Mode::Setup {
             let get_str = |key: &str| -> Option<String> {
-                answers.get(key)
+                answers
+                    .get(key)
                     .and_then(Value::as_str)
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())
@@ -364,10 +365,25 @@ fn build_message_from_event(event: &Value, input: &Value) -> MessagingMessage {
         .get("message_template")
         .and_then(Value::as_str)
         .map(|template| interpolate_template(template, event))
-        .or_else(|| input.get("message").and_then(Value::as_str).map(String::from))
+        .or_else(|| {
+            input
+                .get("message")
+                .and_then(Value::as_str)
+                .map(String::from)
+        })
         .or_else(|| event.get("text").and_then(Value::as_str).map(String::from))
-        .or_else(|| event.get("message").and_then(Value::as_str).map(String::from))
-        .or_else(|| event.get("content").and_then(Value::as_str).map(String::from));
+        .or_else(|| {
+            event
+                .get("message")
+                .and_then(Value::as_str)
+                .map(String::from)
+        })
+        .or_else(|| {
+            event
+                .get("content")
+                .and_then(Value::as_str)
+                .map(String::from)
+        });
 
     // Get message type
     let message_type = input
@@ -377,10 +393,7 @@ fn build_message_from_event(event: &Value, input: &Value) -> MessagingMessage {
         .to_string();
 
     // Get attachments if any
-    let attachments = input
-        .get("attachments")
-        .and_then(Value::as_array)
-        .cloned();
+    let attachments = input.get("attachments").and_then(Value::as_array).cloned();
 
     // Get card if any (for adaptive cards)
     let card = input.get("card").cloned();
@@ -444,8 +457,16 @@ fn build_describe_payload() -> DescribePayload {
         provider: COMPONENT_ID.to_string(),
         world: WORLD_ID.to_string(),
         operations: vec![
-            op("route", "events2msg.op.route.title", "events2msg.op.route.description"),
-            op("validate", "events2msg.op.validate.title", "events2msg.op.validate.description"),
+            op(
+                "route",
+                "events2msg.op.route.title",
+                "events2msg.op.route.description",
+            ),
+            op(
+                "validate",
+                "events2msg.op.validate.title",
+                "events2msg.op.validate.description",
+            ),
         ],
         input_schema: input_schema.clone(),
         output_schema: output_schema.clone(),
@@ -472,15 +493,28 @@ fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) ->
             title: i18n("events2msg.qa.setup.title"),
             description: None,
             questions: vec![
-                qa_q("default_provider", "events2msg.qa.setup.default_provider", false),
-                qa_q("default_channel", "events2msg.qa.setup.default_channel", false),
+                qa_q(
+                    "default_provider",
+                    "events2msg.qa.setup.default_provider",
+                    false,
+                ),
+                qa_q(
+                    "default_channel",
+                    "events2msg.qa.setup.default_channel",
+                    false,
+                ),
             ],
             defaults: json!({
                 "default_provider": "webchat",
             }),
         },
         Mode::Upgrade | Mode::Remove => QaSpec {
-            mode: if mode == Mode::Upgrade { "upgrade" } else { "remove" }.to_string(),
+            mode: if mode == Mode::Upgrade {
+                "upgrade"
+            } else {
+                "remove"
+            }
+            .to_string(),
             title: i18n("events2msg.qa.default.title"),
             description: None,
             questions: Vec::new(),
@@ -650,8 +684,7 @@ fn load_config(input: &Value) -> Result<ComponentConfig, String> {
         .cloned()
         .unwrap_or_else(|| input.clone());
 
-    serde_json::from_value(candidate)
-        .map_err(|err| format!("invalid config: {err}"))
+    serde_json::from_value(candidate).map_err(|err| format!("invalid config: {err}"))
 }
 
 fn canonical_cbor_bytes<T: Serialize>(value: &T) -> Vec<u8> {
@@ -771,13 +804,19 @@ mod tests {
             "team": "support"
         });
         let subject = build_nats_subject("telegram", &input);
-        assert_eq!(subject, "greentic.messaging.egress.prod.acme.support.telegram");
+        assert_eq!(
+            subject,
+            "greentic.messaging.egress.prod.acme.support.telegram"
+        );
     }
 
     #[test]
     fn test_build_nats_subject_defaults() {
         let input = json!({});
         let subject = build_nats_subject("webchat", &input);
-        assert_eq!(subject, "greentic.messaging.egress.default.default.default.webchat");
+        assert_eq!(
+            subject,
+            "greentic.messaging.egress.default.default.default.webchat"
+        );
     }
 }

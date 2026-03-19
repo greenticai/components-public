@@ -218,7 +218,8 @@ impl bindings::exports::greentic::component::qa::Guest for Component {
 
         if mode == bindings::exports::greentic::component::qa::Mode::Setup {
             let get_str = |key: &str| -> Option<String> {
-                answers.get(key)
+                answers
+                    .get(key)
                     .and_then(Value::as_str)
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())
@@ -321,13 +322,18 @@ pub fn handle_validate(input: &Value) -> Value {
     let mut errors: Vec<String> = Vec::new();
 
     // Check for message content
-    if input.get("message").is_none() && input.get("activity").is_none() && input.get("text").is_none() {
+    if input.get("message").is_none()
+        && input.get("activity").is_none()
+        && input.get("text").is_none()
+    {
         errors.push("missing message content (message, activity, or text field)".to_string());
     }
 
     // Validate source provider if specified
     if let Some(provider) = input.get("source_provider").and_then(Value::as_str) {
-        let valid_providers = ["telegram", "slack", "teams", "webchat", "whatsapp", "webex", "email", "sms"];
+        let valid_providers = [
+            "telegram", "slack", "teams", "webchat", "whatsapp", "webex", "email", "sms",
+        ];
         if !valid_providers.contains(&provider) {
             errors.push(format!("invalid source_provider: {provider}"));
         }
@@ -406,7 +412,11 @@ fn extract_event_from_message(input: &Value, cfg: &ComponentConfig) -> EventPayl
 fn determine_event_type(input: &Value) -> String {
     // Check for specific message types
     if input.get("activity").is_some() {
-        if let Some(activity_type) = input.get("activity").and_then(|a| a.get("type")).and_then(Value::as_str) {
+        if let Some(activity_type) = input
+            .get("activity")
+            .and_then(|a| a.get("type"))
+            .and_then(Value::as_str)
+        {
             return format!("message.{}", activity_type.to_lowercase());
         }
     }
@@ -471,7 +481,10 @@ fn extract_message_data(input: &Value) -> Value {
     }
 
     // Extract reply context
-    if let Some(reply_to) = input.get("reply_to_message_id").or_else(|| input.get("reply_to")) {
+    if let Some(reply_to) = input
+        .get("reply_to_message_id")
+        .or_else(|| input.get("reply_to"))
+    {
         data.insert("reply_to".to_string(), reply_to.clone());
     }
 
@@ -516,9 +529,21 @@ fn build_describe_payload() -> DescribePayload {
         provider: COMPONENT_ID.to_string(),
         world: WORLD_ID.to_string(),
         operations: vec![
-            op("route", "msg2events.op.route.title", "msg2events.op.route.description"),
-            op("extract", "msg2events.op.extract.title", "msg2events.op.extract.description"),
-            op("validate", "msg2events.op.validate.title", "msg2events.op.validate.description"),
+            op(
+                "route",
+                "msg2events.op.route.title",
+                "msg2events.op.route.description",
+            ),
+            op(
+                "extract",
+                "msg2events.op.extract.title",
+                "msg2events.op.extract.description",
+            ),
+            op(
+                "validate",
+                "msg2events.op.validate.title",
+                "msg2events.op.validate.description",
+            ),
         ],
         input_schema: input_schema.clone(),
         output_schema: output_schema.clone(),
@@ -546,14 +571,23 @@ fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) ->
             description: None,
             questions: vec![
                 qa_q("default_flow", "msg2events.qa.setup.default_flow", false),
-                qa_q("default_event_type", "msg2events.qa.setup.default_event_type", false),
+                qa_q(
+                    "default_event_type",
+                    "msg2events.qa.setup.default_event_type",
+                    false,
+                ),
             ],
             defaults: json!({
                 "default_event_type": "message.text",
             }),
         },
         Mode::Upgrade | Mode::Remove => QaSpec {
-            mode: if mode == Mode::Upgrade { "upgrade" } else { "remove" }.to_string(),
+            mode: if mode == Mode::Upgrade {
+                "upgrade"
+            } else {
+                "remove"
+            }
+            .to_string(),
             title: i18n("msg2events.qa.default.title"),
             description: None,
             questions: Vec::new(),
@@ -699,8 +733,7 @@ fn load_config(input: &Value) -> Result<ComponentConfig, String> {
         .cloned()
         .unwrap_or_else(|| input.clone());
 
-    serde_json::from_value(candidate)
-        .map_err(|err| format!("invalid config: {err}"))
+    serde_json::from_value(candidate).map_err(|err| format!("invalid config: {err}"))
 }
 
 fn canonical_cbor_bytes<T: Serialize>(value: &T) -> Vec<u8> {
