@@ -1,0 +1,97 @@
+{
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "id": "ai.greentic.component-chat2data-validator",
+  "name": "component-chat2data-validator",
+  "version": "0.1.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
+  "operations": [
+    {
+      "name": "validate",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Validate QueryIntent against whitelist",
+        "type": "object",
+        "required": ["intent"],
+        "properties": {
+          "intent": { "type": "object", "additionalProperties": true },
+          "whitelist": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "valid": { "type": "boolean" },
+          "validated_intent": { "type": "object" },
+          "violations": { "type": "array" },
+          "warnings": { "type": "array" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "load_whitelist",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "whitelist": { "type": "object", "additionalProperties": true },
+          "whitelist_url": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "loaded": { "type": "boolean" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  ],
+  "default_operation": "validate",
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "whitelist": { "type": "object" },
+      "whitelist_url": { "type": "string" },
+      "strict_mode": { "type": "boolean", "default": true }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "supports": ["messaging"],
+  "profiles": {
+    "default": "stateless",
+    "supported": ["stateless"]
+  },
+  "secret_requirements": [],
+  "capabilities": {
+    "wasi": {
+      "filesystem": { "mode": "none", "mounts": [] },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "telemetry": { "scope": "node" },
+      "secrets": { "required": [] }
+    }
+  },
+  "limits": {
+    "memory_mb": 64,
+    "wall_time_ms": 5000
+  },
+  "artifacts": {
+    "component_wasm": "../../target/wasm32-wasip2/release/component_chat2data_validator.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

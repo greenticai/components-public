@@ -1,0 +1,72 @@
+{
+  "id": "ai.greentic.component-chat2data-llm",
+  "name": "component-chat2data-llm",
+  "version": "0.1.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.1",
+  "description": "Chat2Data LLM intent parser - converts natural language to structured QueryIntent",
+  "profiles": {
+    "default": "default",
+    "supported": ["default"]
+  },
+  "config_schema": {
+    "provider_config": {
+      "format": "json",
+      "path": ""
+    }
+  },
+  "secret_requirements": [
+    {
+      "name": "OPENAI_API_KEY",
+      "scope": "tenant",
+      "description": "OpenAI API key for LLM calls"
+    }
+  ],
+  "operations": [
+    {
+      "name": "parse",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "context": { "type": "object" }
+        },
+        "required": ["message"]
+      },
+      "output_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "parse_multi",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "context": { "type": "object" },
+          "conversation_history": { "type": "array" }
+        },
+        "required": ["message"]
+      },
+      "output_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "select_renderer",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object" }
+        },
+        "required": ["data"]
+      },
+      "output_schema": {
+        "type": "object"
+      }
+    }
+  ],
+  "capabilities": {
+    "wasi": {},
+    "host": {}
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "id": "ai.greentic.component-chat2data-renderer",
+  "name": "component-chat2data-renderer",
+  "version": "0.1.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
+  "operations": [
+    {
+      "name": "render",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Render query results to AdaptiveCard",
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": { "type": "object", "additionalProperties": true },
+          "renderer": { "type": "string", "enum": ["list", "table", "card", "graph", "auto"] },
+          "renderer_options": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "card": { "type": "object" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "auto_select",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "renderer": { "type": "string" },
+          "reasoning": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  ],
+  "default_operation": "render",
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "max_list_items": { "type": "integer", "default": 10 },
+      "max_table_columns": { "type": "integer", "default": 6 },
+      "theme": {
+        "type": "object",
+        "properties": {
+          "accent_color": { "type": "string", "default": "#0078D4" },
+          "background_color": { "type": "string", "default": "#FFFFFF" }
+        }
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "supports": ["messaging"],
+  "profiles": {
+    "default": "stateless",
+    "supported": ["stateless"]
+  },
+  "secret_requirements": [],
+  "capabilities": {
+    "wasi": {
+      "filesystem": { "mode": "none", "mounts": [] },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "telemetry": { "scope": "node" },
+      "secrets": { "required": [] }
+    }
+  },
+  "limits": {
+    "memory_mb": 64,
+    "wall_time_ms": 5000
+  },
+  "artifacts": {
+    "component_wasm": "../../target/wasm32-wasip2/release/component_chat2data_renderer.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

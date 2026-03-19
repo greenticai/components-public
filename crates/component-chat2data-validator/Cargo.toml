@@ -1,0 +1,28 @@
+[package]
+name = "component-chat2data-validator"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Chat2Data Validator - whitelist-based intent validation for security"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wit-bindgen = "0.52"
+
+[package.metadata.component]
+package = "greentic:chat2data-validator"
+
+[package.metadata.component.target]
+path = "wit/chat2data-validator"
+world = "component-v0-v6-v0"
+
+[package.metadata.component.target.dependencies]
+"greentic:interfaces-types" = { path = "wit/chat2data-validator/deps/interfaces-types" }
+"greentic:secrets-store" = { path = "wit/chat2data-validator/deps/secrets-store" }
+"greentic:http" = { path = "wit/chat2data-validator/deps/http" }
+"greentic:telemetry" = { path = "wit/chat2data-validator/deps/telemetry" }

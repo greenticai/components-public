@@ -1,4 +1,6 @@
 #![allow(unsafe_op_in_unsafe_fn)]
+#![allow(dead_code)]
+#![allow(clippy::collapsible_if)]
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -232,7 +234,8 @@ impl bindings::exports::greentic::component::qa::Guest for Component {
 
         if mode == bindings::exports::greentic::component::qa::Mode::Setup {
             let get_str = |key: &str| -> Option<String> {
-                answers.get(key)
+                answers
+                    .get(key)
                     .and_then(Value::as_str)
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())
@@ -331,16 +334,19 @@ pub fn handle_request(input: &Value) -> Value {
 
     match http_send(&request, cfg.timeout_ms) {
         Ok(resp) => {
-            let body_str = resp.body
+            let body_str = resp
+                .body
                 .map(|b| String::from_utf8_lossy(&b).to_string())
                 .unwrap_or_default();
 
-            let body_json: Value = serde_json::from_str(&body_str)
-                .unwrap_or_else(|_| Value::String(body_str.clone()));
+            let body_json: Value =
+                serde_json::from_str(&body_str).unwrap_or_else(|_| Value::String(body_str.clone()));
 
             log_event("request_success");
 
-            let headers_map: serde_json::Map<String, Value> = resp.headers.iter()
+            let headers_map: serde_json::Map<String, Value> = resp
+                .headers
+                .iter()
                 .map(|(k, v)| (k.clone(), Value::String(v.clone())))
                 .collect();
 
@@ -373,19 +379,26 @@ pub fn handle_stream(input: &Value) -> Value {
         Err(err) => return json!({"ok": false, "error": err}),
     };
 
-    let has_accept = request.headers.iter().any(|(k, _)| k.to_lowercase() == "accept");
+    let has_accept = request
+        .headers
+        .iter()
+        .any(|(k, _)| k.to_lowercase() == "accept");
     if !has_accept {
-        request.headers.push(("Accept".to_string(), "text/event-stream".to_string()));
+        request
+            .headers
+            .push(("Accept".to_string(), "text/event-stream".to_string()));
     }
 
     match http_send(&request, cfg.timeout_ms) {
         Ok(resp) => {
-            let body_str = resp.body
+            let body_str = resp
+                .body
                 .map(|b| String::from_utf8_lossy(&b).to_string())
                 .unwrap_or_default();
 
-            let is_sse = resp.headers.iter()
-                .any(|(k, v)| k.to_lowercase() == "content-type" && v.contains("text/event-stream"));
+            let is_sse = resp.headers.iter().any(|(k, v)| {
+                k.to_lowercase() == "content-type" && v.contains("text/event-stream")
+            });
 
             let events = if is_sse {
                 parse_sse_events(&body_str)
@@ -393,7 +406,8 @@ pub fn handle_stream(input: &Value) -> Value {
                 parse_ndjson(&body_str)
             };
 
-            let full_content = events.iter()
+            let full_content = events
+                .iter()
                 .filter_map(|e| e.get("data").and_then(Value::as_str))
                 .collect::<Vec<_>>()
                 .join("");
@@ -419,21 +433,32 @@ pub fn handle_stream(input: &Value) -> Value {
 
 /// Build HTTP request from config and input
 pub fn build_http_request(cfg: &ComponentConfig, input: &Value) -> Result<HttpRequest, String> {
-    let url = input.get("url")
+    let url = input
+        .get("url")
         .and_then(Value::as_str)
         .map(|s| s.trim().to_string())
-        .or_else(|| input.get("endpoint").and_then(Value::as_str).map(|s| s.to_string()))
+        .or_else(|| {
+            input
+                .get("endpoint")
+                .and_then(Value::as_str)
+                .map(|s| s.to_string())
+        })
         .ok_or("missing url")?;
 
     let full_url = if url.starts_with("http://") || url.starts_with("https://") {
         url
     } else if let Some(ref base) = cfg.base_url {
-        format!("{}/{}", base.trim_end_matches('/'), url.trim_start_matches('/'))
+        format!(
+            "{}/{}",
+            base.trim_end_matches('/'),
+            url.trim_start_matches('/')
+        )
     } else {
         url
     };
 
-    let method = input.get("method")
+    let method = input
+        .get("method")
         .and_then(Value::as_str)
         .unwrap_or(DEFAULT_METHOD)
         .to_uppercase();
@@ -441,7 +466,9 @@ pub fn build_http_request(cfg: &ComponentConfig, input: &Value) -> Result<HttpRe
     let mut headers: Vec<(String, String)> = Vec::new();
 
     if let Some(ref default_headers_json) = cfg.default_headers {
-        if let Ok(default_headers) = serde_json::from_str::<serde_json::Map<String, Value>>(default_headers_json) {
+        if let Ok(default_headers) =
+            serde_json::from_str::<serde_json::Map<String, Value>>(default_headers_json)
+        {
             for (k, v) in default_headers {
                 if let Some(v_str) = v.as_str() {
                     headers.push((k, v_str.to_string()));
@@ -463,7 +490,10 @@ pub fn build_http_request(cfg: &ComponentConfig, input: &Value) -> Result<HttpRe
 
         match cfg.auth_type.as_str() {
             "bearer" => {
-                headers.push(("Authorization".to_string(), format!("Bearer {}", resolved_token)));
+                headers.push((
+                    "Authorization".to_string(),
+                    format!("Bearer {}", resolved_token),
+                ));
             }
             "api_key" => {
                 headers.push((cfg.api_key_header.clone(), resolved_token));
@@ -476,7 +506,9 @@ pub fn build_http_request(cfg: &ComponentConfig, input: &Value) -> Result<HttpRe
         }
     }
 
-    let has_content_type = headers.iter().any(|(k, _)| k.to_lowercase() == "content-type");
+    let has_content_type = headers
+        .iter()
+        .any(|(k, _)| k.to_lowercase() == "content-type");
     if !has_content_type && input.get("body").is_some() {
         headers.push(("Content-Type".to_string(), "application/json".to_string()));
     }
@@ -509,7 +541,8 @@ pub fn parse_sse_events(body: &str) -> Vec<Value> {
                 current_event.clear();
             }
         } else if let Some(data) = line.strip_prefix("data: ") {
-            let existing = current_event.get("data")
+            let existing = current_event
+                .get("data")
                 .and_then(Value::as_str)
                 .unwrap_or("");
             let new_data = if existing.is_empty() {
@@ -555,8 +588,16 @@ pub fn base64_encode(data: &[u8]) -> String {
 
     while i < data.len() {
         let b0 = data[i] as usize;
-        let b1 = if i + 1 < data.len() { data[i + 1] as usize } else { 0 };
-        let b2 = if i + 2 < data.len() { data[i + 2] as usize } else { 0 };
+        let b1 = if i + 1 < data.len() {
+            data[i + 1] as usize
+        } else {
+            0
+        };
+        let b2 = if i + 2 < data.len() {
+            data[i + 2] as usize
+        } else {
+            0
+        };
 
         result.push(ALPHABET[b0 >> 2] as char);
         result.push(ALPHABET[((b0 & 0x03) << 4) | (b1 >> 4)] as char);
@@ -592,18 +633,24 @@ fn build_describe_payload() -> DescribePayload {
         provider: COMPONENT_ID.to_string(),
         world: WORLD_ID.to_string(),
         operations: vec![
-            op("request", "http.op.request.title", "http.op.request.description"),
-            op("stream", "http.op.stream.title", "http.op.stream.description"),
+            op(
+                "request",
+                "http.op.request.title",
+                "http.op.request.description",
+            ),
+            op(
+                "stream",
+                "http.op.stream.title",
+                "http.op.stream.description",
+            ),
         ],
         input_schema: input_schema.clone(),
         output_schema: output_schema.clone(),
         config_schema: config_schema.clone(),
-        redactions: vec![
-            RedactionRule {
-                path: "$.auth_token".to_string(),
-                strategy: "replace".to_string(),
-            },
-        ],
+        redactions: vec![RedactionRule {
+            path: "$.auth_token".to_string(),
+            strategy: "replace".to_string(),
+        }],
         schema_hash: "http-schema-v1".to_string(),
     }
 }
@@ -637,7 +684,12 @@ fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) ->
             }),
         },
         Mode::Upgrade | Mode::Remove => QaSpec {
-            mode: if mode == Mode::Upgrade { "upgrade" } else { "remove" }.to_string(),
+            mode: if mode == Mode::Upgrade {
+                "upgrade"
+            } else {
+                "remove"
+            }
+            .to_string(),
             title: i18n("http.qa.default.title"),
             description: None,
             questions: Vec::new(),
@@ -815,8 +867,7 @@ fn load_config(input: &Value) -> Result<ComponentConfig, String> {
         .cloned()
         .unwrap_or_else(|| input.clone());
 
-    serde_json::from_value(candidate)
-        .map_err(|err| format!("invalid config: {err}"))
+    serde_json::from_value(candidate).map_err(|err| format!("invalid config: {err}"))
 }
 
 fn default_auth_type() -> String {
@@ -867,8 +918,9 @@ fn log_event(_event: &str) {
 fn resolve_secret(token: &str) -> Result<String, String> {
     if let Some(secret_name) = token.strip_prefix("secret:") {
         match secrets_store::get(secret_name) {
-            Ok(Some(bytes)) => String::from_utf8(bytes)
-                .map_err(|_| "secret not valid utf-8".to_string()),
+            Ok(Some(bytes)) => {
+                String::from_utf8(bytes).map_err(|_| "secret not valid utf-8".to_string())
+            }
             Ok(None) => Err(format!("secret not found: {}", secret_name)),
             Err(_) => Err(format!("failed to get secret: {}", secret_name)),
         }
@@ -881,8 +933,7 @@ fn resolve_secret(token: &str) -> Result<String, String> {
 fn resolve_secret(token: &str) -> Result<String, String> {
     if let Some(secret_name) = token.strip_prefix("secret:") {
         // For testing, check environment variable
-        std::env::var(secret_name)
-            .map_err(|_| format!("secret not found: {}", secret_name))
+        std::env::var(secret_name).map_err(|_| format!("secret not found: {}", secret_name))
     } else {
         Ok(token.to_string())
     }
