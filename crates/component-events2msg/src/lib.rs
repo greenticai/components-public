@@ -1,4 +1,5 @@
 #![allow(unsafe_op_in_unsafe_fn)]
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
