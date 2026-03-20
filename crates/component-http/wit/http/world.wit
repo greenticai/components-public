@@ -1,15 +1,210 @@
+// SPDX-License-Identifier: MIT
+// Consolidated WIT for component-http
+
 package greentic:component@0.6.1;
 
-use greentic:http/http-client@1.1.0 as http-client;
-use greentic:secrets-store/secrets-store@1.0.0;
-use greentic:telemetry/logger-api@1.0.0;
+// ============================================================================
+// Shared Types Interface
+// ============================================================================
+
+interface types {
+  /// Environment identifier.
+  type env-id = string;
+
+  /// Tenant identifier propagated across providers.
+  type tenant-id = string;
+
+  /// Team identifier scoped to a tenant.
+  type team-id = string;
+
+  /// User identifier scoped to a tenant.
+  type user-id = string;
+
+  /// Stable key referencing sessions.
+  type session-key = string;
+
+  /// Impersonation context propagated with a tenant.
+  record impersonation {
+    actor-id: user-id,
+    reason: option<string>,
+  }
+
+  /// Invocation tenant context shared across Greentic surfaces.
+  record tenant-ctx {
+    env: env-id,
+    tenant: tenant-id,
+    tenant-id: tenant-id,
+    team: option<team-id>,
+    team-id: option<team-id>,
+    user: option<user-id>,
+    user-id: option<user-id>,
+    trace-id: option<string>,
+    i18n-id: option<string>,
+    correlation-id: option<string>,
+    attributes: list<tuple<string, string>>,
+    session-id: option<string>,
+    flow-id: option<string>,
+    node-id: option<string>,
+    provider-id: option<string>,
+    deadline-ms: option<s64>,
+    attempt: u32,
+    idempotency-key: option<string>,
+    impersonation: option<impersonation>,
+  }
+
+  /// Minimal telemetry span context.
+  record span-context {
+    tenant: tenant-id,
+    session-id: option<session-key>,
+    flow-id: string,
+    node-id: option<string>,
+    provider: string,
+    start-ms: option<s64>,
+    end-ms: option<s64>,
+  }
+}
+
+// ============================================================================
+// HTTP Client Interface
+// ============================================================================
+
+interface http-client {
+  use types.{tenant-ctx};
+
+  /// Canonical host error payload.
+  record host-error {
+    code: string,
+    message: string,
+  }
+
+  /// HTTP request issued by a component.
+  record request {
+    method: string,
+    url: string,
+    headers: list<tuple<string, string>>,
+    body: option<list<u8>>,
+  }
+
+  /// HTTP response returned by the host.
+  record response {
+    status: u16,
+    headers: list<tuple<string, string>>,
+    body: option<list<u8>>,
+  }
+
+  /// Optional request tunables applied by the host.
+  record request-options {
+    /// Millisecond deadline applied by the host, if supported.
+    timeout-ms: option<u32>,
+    /// Whether TLS validation errors may be ignored.
+    allow-insecure: option<bool>,
+    /// Whether redirects should be followed automatically.
+    follow-redirects: option<bool>,
+  }
+
+  /// Issues an HTTP request using the host's networking stack.
+  send: func(
+    req: request,
+    opts: option<request-options>,
+    ctx: option<tenant-ctx>
+  ) -> result<response, host-error>;
+}
+
+// ============================================================================
+// Secrets Store Interface
+// ============================================================================
+
+interface secrets-store {
+  /// Canonical error payload for secret lookups.
+  enum secrets-error {
+    /// Secret was not found or not provisioned for this component.
+    not-found,
+    /// Access to the secret was denied by host policy.
+    denied,
+    /// The provided key was invalid or malformed.
+    invalid-key,
+    /// An internal host error occurred.
+    internal,
+  }
+
+  /// Reads a secret value; returns `none` when the key is missing.
+  get: func(key: string) -> result<option<list<u8>>, secrets-error>;
+}
+
+// ============================================================================
+// Logger API Interface
+// ============================================================================
+
+interface logger-api {
+  use types.{tenant-ctx, tenant-id, session-key};
+
+  /// Canonical host error payload.
+  record host-error {
+    code: string,
+    message: string,
+  }
+
+  enum op-ack { ok }
+
+  /// Minimal telemetry span context.
+  record span-context {
+    tenant: tenant-id,
+    session-id: option<session-key>,
+    flow-id: string,
+    node-id: option<string>,
+    provider: string,
+    start-ms: option<s64>,
+    end-ms: option<s64>,
+  }
+
+  /// Emits telemetry fields under the provided span context.
+  log: func(
+    span: span-context,
+    fields: list<tuple<string, string>>,
+    ctx: option<tenant-ctx>
+  ) -> result<op-ack, host-error>;
+}
+
+// ============================================================================
+// Component Exports
+// ============================================================================
+
+interface descriptor {
+  describe: func() -> list<u8>;
+}
+
+interface runtime {
+  invoke: func(op: string, input-cbor: list<u8>) -> list<u8>;
+}
+
+interface qa {
+  enum mode {
+    default,
+    setup,
+    upgrade,
+    remove,
+  }
+
+  qa-spec: func(mode: mode) -> list<u8>;
+  apply-answers: func(mode: mode, answers-cbor: list<u8>) -> list<u8>;
+}
+
+interface component-i18n {
+  i18n-keys: func() -> list<string>;
+  i18n-bundle: func(locale: string) -> list<u8>;
+}
+
+// ============================================================================
+// World Definition
+// ============================================================================
 
 world component-v0-v6-v0 {
-    import http-client;
-    import secrets-store;
-    import logger-api;
-    export descriptor;
-    export runtime;
-    export qa;
-    export component-i18n;
+  import http-client;
+  import secrets-store;
+  import logger-api;
+
+  export descriptor;
+  export runtime;
+  export qa;
+  export component-i18n;
 }
