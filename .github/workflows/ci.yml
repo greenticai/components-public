@@ -42,8 +42,6 @@ jobs:
             artifact: component_pack2flow.wasm
           - name: component-http
             artifact: component_http.wasm
-          - name: component-dify
-            artifact: component_dify.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
