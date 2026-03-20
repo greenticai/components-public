@@ -15,9 +15,9 @@ mod bindings {
 #[cfg(target_arch = "wasm32")]
 use bindings::greentic::component::http_client as client;
 #[cfg(target_arch = "wasm32")]
-use bindings::greentic::component::secrets_store;
-#[cfg(target_arch = "wasm32")]
 use bindings::greentic::component::logger_api;
+#[cfg(target_arch = "wasm32")]
+use bindings::greentic::component::secrets_store;
 
 const COMPONENT_ID: &str = "http";
 const WORLD_ID: &str = "component-v0-v6-v0";
