@@ -12,7 +12,7 @@ mod bindings {
 }
 
 #[cfg(target_arch = "wasm32")]
-use bindings::greentic::telemetry::logger_api;
+use bindings::greentic::component::logger_api;
 
 const COMPONENT_ID: &str = "events2msg";
 const WORLD_ID: &str = "component-v0-v6-v0";

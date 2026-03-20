@@ -12,7 +12,7 @@ authors.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [package.metadata.component]
-package = "greentic:events2msg"
+package = "greentic:component"
 
 [package.metadata.component.target]
 path = "wit/events2msg"
