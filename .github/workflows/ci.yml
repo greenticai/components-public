@@ -42,6 +42,10 @@ jobs:
             artifact: component_pack2flow.wasm
           - name: component-http
             artifact: component_http.wasm
+          - name: component-events2msg
+            artifact: component_events2msg.wasm
+          - name: component-msg2events
+            artifact: component_msg2events.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
