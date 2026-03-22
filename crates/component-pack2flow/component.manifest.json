@@ -115,7 +115,7 @@
     "wall_time_ms": 1000
   },
   "artifacts": {
-    "component_wasm": "target/wasm32-wasip2/release/component_pack2flow.wasm"
+    "component_wasm": "../../target/wasm32-wasip2/release/component_pack2flow.wasm"
   },
   "hashes": {
     "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"

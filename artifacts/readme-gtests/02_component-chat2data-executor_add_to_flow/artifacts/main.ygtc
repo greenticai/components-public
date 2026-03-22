@@ -1,0 +1,49 @@
+id: ai.greentic.component-chat2data-executor.gtest
+title: component-chat2data-executor gtest
+description: Wizard add-step smoke test
+type: messaging
+start: executor_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      executor_default: []
+      executor_personalized: []
+    components:
+      executor_default:
+        abi_version: 0.6.0
+        added_at: 1774183441
+        component_id: repo://local/component-chat2data-executor
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183441
+      executor_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183441
+        component_id: repo://local/component-chat2data-executor
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183441
+    secrets_hints:
+      executor_default: []
+      executor_personalized: []
+nodes:
+  executor_default:
+    routing:
+    - to: executor_personalized
+    run:
+      component: repo://local/component-chat2data-executor
+      config: {}
+  executor_personalized:
+    routing: out
+    run:
+      component: repo://local/component-chat2data-executor
+      config:
+        github_api_url: https://github.example/api/v3
+        github_token: secret:GITHUB_TOKEN
+        timeout_ms: 45000

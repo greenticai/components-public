@@ -1,0 +1,7 @@
+{
+  "step": 4,
+  "line_no": 19,
+  "command": "greentic-flow new --flow /tmp/test-pack/component-chat2data-translator/flows/main.ygtc --id ai.greentic.component-chat2data-translator.gtest --type messaging --name component-chat2data-translator gtest --description Wizard add-step smoke test --force",
+  "exit_code": 0,
+  "duration_ms": 10
+}

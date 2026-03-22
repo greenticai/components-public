@@ -1,0 +1,7 @@
+{
+  "step": 6,
+  "line_no": 23,
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-events2msg/flows/main.ygtc --node-id events2msg_default --component repo://local/component-events2msg --resolver fixture:///tmp/gtest-fFyFyD/fixtures --wizard-mode default --routing-out",
+  "exit_code": 0,
+  "duration_ms": 36
+}

@@ -1,0 +1,7 @@
+{
+  "step": 1,
+  "line_no": 6,
+  "command": "rm -rf /tmp/test-pack/component-http",
+  "exit_code": 0,
+  "duration_ms": 2
+}

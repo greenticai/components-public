@@ -1,0 +1,7 @@
+{
+  "step": 3,
+  "line_no": 17,
+  "command": "greentic-pack new --dir /tmp/test-pack/component-msg2events ai.greentic.component-msg2events-gtest",
+  "exit_code": 0,
+  "duration_ms": 18
+}

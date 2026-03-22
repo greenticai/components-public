@@ -1,0 +1,7 @@
+{
+  "step": 9,
+  "line_no": 30,
+  "command": "grep -q executor_personalized: /tmp/test-pack/component-chat2data-executor/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

@@ -1,0 +1,7 @@
+{
+  "step": 10,
+  "line_no": 28,
+  "command": "grep -q component: repo://local/component-pack2flow /tmp/test-pack/component-pack2flow/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

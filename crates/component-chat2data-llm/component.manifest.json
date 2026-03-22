@@ -1,72 +1,149 @@
 {
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
   "id": "ai.greentic.component-chat2data-llm",
   "name": "component-chat2data-llm",
   "version": "0.1.0",
-  "world": "greentic:component/component-v0-v6-v0@0.6.1",
-  "description": "Chat2Data LLM intent parser - converts natural language to structured QueryIntent",
-  "profiles": {
-    "default": "default",
-    "supported": ["default"]
-  },
-  "config_schema": {
-    "provider_config": {
-      "format": "json",
-      "path": ""
-    }
-  },
-  "secret_requirements": [
-    {
-      "name": "OPENAI_API_KEY",
-      "scope": "tenant",
-      "description": "OpenAI API key for LLM calls"
-    }
-  ],
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
   "operations": [
     {
       "name": "parse",
       "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Parse a natural-language request into a query intent",
         "type": "object",
+        "required": ["message"],
         "properties": {
           "message": { "type": "string" },
-          "context": { "type": "object" }
+          "context": { "type": "object", "additionalProperties": true }
         },
-        "required": ["message"]
+        "additionalProperties": true
       },
       "output_schema": {
-        "type": "object"
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "intent": { "type": "object", "additionalProperties": true },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
       }
     },
     {
       "name": "parse_multi",
       "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Parse a natural-language request with conversation history",
         "type": "object",
+        "required": ["message"],
         "properties": {
           "message": { "type": "string" },
-          "context": { "type": "object" },
-          "conversation_history": { "type": "array" }
+          "context": { "type": "object", "additionalProperties": true },
+          "conversation_history": { "type": "array", "items": { "type": "object" } }
         },
-        "required": ["message"]
+        "additionalProperties": true
       },
       "output_schema": {
-        "type": "object"
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "intent": { "type": "object", "additionalProperties": true },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
       }
     },
     {
       "name": "select_renderer",
       "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Select a renderer for execution results",
         "type": "object",
+        "required": ["data"],
         "properties": {
-          "data": { "type": "object" }
+          "data": { "type": "object", "additionalProperties": true }
         },
-        "required": ["data"]
+        "additionalProperties": true
       },
       "output_schema": {
-        "type": "object"
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "renderer": { "type": "string" },
+          "reasoning": { "type": "string" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
       }
     }
   ],
+  "default_operation": "parse",
+  "config_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "api_key": { "type": "string", "secret": true },
+      "model": { "type": "string", "default": "gpt-4o-mini" },
+      "temperature": { "type": "number", "default": 0.1 },
+      "timeout_ms": { "type": "integer", "default": 30000 },
+      "max_tokens": { "type": "integer", "default": 2000 }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "supports": ["messaging"],
+  "profiles": {
+    "default": "stateless",
+    "supported": ["stateless"]
+  },
+  "secret_requirements": [
+    {
+      "key": "OPENAI_API_KEY",
+      "required": false,
+      "description": "OpenAI API key for LLM calls",
+      "scope": {
+        "env": "dev",
+        "tenant": "default"
+      },
+      "format": "text"
+    }
+  ],
   "capabilities": {
-    "wasi": {},
-    "host": {}
+    "wasi": {
+      "filesystem": { "mode": "none", "mounts": [] },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "http": { "client": true, "server": false },
+      "telemetry": { "scope": "node" },
+      "secrets": {
+        "required": [
+          {
+            "key": "OPENAI_API_KEY",
+            "required": false,
+            "description": "OpenAI API key for LLM calls",
+            "scope": {
+              "env": "dev",
+              "tenant": "default"
+            },
+            "format": "text"
+          }
+        ]
+      }
+    }
+  },
+  "limits": {
+    "memory_mb": 128,
+    "wall_time_ms": 60000
+  },
+  "artifacts": {
+    "component_wasm": "../../target/wasm32-wasip2/release/component_chat2data_llm.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
   }
 }

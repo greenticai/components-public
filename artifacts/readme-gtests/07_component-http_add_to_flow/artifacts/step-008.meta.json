@@ -1,0 +1,7 @@
+{
+  "step": 8,
+  "line_no": 32,
+  "command": "grep -q http_default: /tmp/test-pack/component-http/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 2
+}

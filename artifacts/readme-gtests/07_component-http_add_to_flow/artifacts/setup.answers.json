@@ -1,0 +1,9 @@
+{
+  "base_url": "https://api.example.com",
+  "auth_type": "bearer",
+  "auth_token": "secret:HTTP_TOKEN",
+  "timeout_ms": 15000,
+  "default_headers": {
+    "X-Team": "qa"
+  }
+}

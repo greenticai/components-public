@@ -1,0 +1,5 @@
+{
+  "github_token": "secret:GITHUB_TOKEN",
+  "github_api_url": "https://github.example/api/v3",
+  "timeout_ms": 45000
+}

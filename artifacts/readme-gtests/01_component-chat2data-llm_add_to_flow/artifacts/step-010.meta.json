@@ -1,0 +1,7 @@
+{
+  "step": 10,
+  "line_no": 32,
+  "command": "grep -q llm_personalized: /tmp/test-pack/component-chat2data-llm/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

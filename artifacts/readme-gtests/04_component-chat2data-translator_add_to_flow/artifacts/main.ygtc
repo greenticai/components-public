@@ -1,0 +1,48 @@
+id: ai.greentic.component-chat2data-translator.gtest
+title: component-chat2data-translator gtest
+description: Wizard add-step smoke test
+type: messaging
+start: translator_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      translator_default: []
+      translator_personalized: []
+    components:
+      translator_default:
+        abi_version: 0.6.0
+        added_at: 1774183441
+        component_id: repo://local/component-chat2data-translator
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183441
+      translator_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183441
+        component_id: repo://local/component-chat2data-translator
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183441
+    secrets_hints:
+      translator_default: []
+      translator_personalized: []
+nodes:
+  translator_default:
+    routing:
+    - to: translator_personalized
+    run:
+      component: repo://local/component-chat2data-translator
+      config: {}
+  translator_personalized:
+    routing: out
+    run:
+      component: repo://local/component-chat2data-translator
+      config:
+        default_max_rows: 250
+        github_api_url: https://ghe.example/api/v3

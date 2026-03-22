@@ -1,0 +1,7 @@
+{
+  "step": 6,
+  "line_no": 24,
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-chat2data-llm/flows/main.ygtc --node-id llm_default --component repo://local/component-chat2data-llm --resolver fixture:///tmp/gtest-dOOvtw/fixtures --wizard-mode default --routing-out",
+  "exit_code": 0,
+  "duration_ms": 37
+}

@@ -1,0 +1,7 @@
+{
+  "step": 5,
+  "line_no": 25,
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-renderer --out /tmp/gtest-MPPGBu/fixtures --default-answers /tmp/gtest-MPPGBu/default.answers.json --setup-answers /tmp/gtest-MPPGBu/setup.answers.json",
+  "exit_code": 0,
+  "duration_ms": 149
+}

@@ -1,0 +1,7 @@
+{
+  "step": 11,
+  "line_no": 33,
+  "command": "grep -q default_event_type: message.command /tmp/test-pack/component-msg2events/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

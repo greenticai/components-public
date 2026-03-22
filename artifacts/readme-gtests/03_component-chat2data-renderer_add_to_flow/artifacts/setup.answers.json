@@ -1,0 +1,8 @@
+{
+  "max_list_items": 5,
+  "max_table_columns": 4,
+  "theme": {
+    "accent_color": "#005A9C",
+    "background_color": "#F5F9FF"
+  }
+}

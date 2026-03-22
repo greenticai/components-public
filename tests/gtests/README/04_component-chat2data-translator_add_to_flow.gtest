@@ -1,0 +1,37 @@
+#SET PACK_DIR=/tmp/test-pack/component-chat2data-translator
+#SET FLOW=${PACK_DIR}/flows/main.ygtc
+#SET FIXTURES=${WORK_DIR}/fixtures
+#SET DEFAULT_ANSWERS=${WORK_DIR}/default.answers.json
+#SET SETUP_ANSWERS=${WORK_DIR}/setup.answers.json
+#RUN rm -rf ${PACK_DIR}
+#RUN mkdir -p /tmp/test-pack
+#WRITE ${DEFAULT_ANSWERS} <<<EOF
+{}
+EOF
+#WRITE ${SETUP_ANSWERS} <<<EOF
+{
+  "default_max_rows": 250,
+  "github_api_url": "https://ghe.example/api/v3"
+}
+EOF
+#RUN greentic-pack new --dir ${PACK_DIR} ai.greentic.component-chat2data-translator-gtest
+#EXPECT_EXIT 0
+#RUN greentic-flow new --flow ${FLOW} --id ai.greentic.component-chat2data-translator.gtest --type messaging --name "component-chat2data-translator gtest" --description "Wizard add-step smoke test" --force
+#EXPECT_EXIT 0
+#RUN cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-translator --out ${FIXTURES} --default-answers ${DEFAULT_ANSWERS} --setup-answers ${SETUP_ANSWERS}
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id translator_default --component repo://local/component-chat2data-translator --resolver fixture://${FIXTURES} --wizard-mode default --routing-out
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id translator_personalized --component repo://local/component-chat2data-translator --resolver fixture://${FIXTURES} --wizard-mode setup --answers-file ${SETUP_ANSWERS} --routing-out --after translator_default
+#EXPECT_EXIT 0
+#RUN grep -q 'translator_default:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'translator_personalized:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'default_max_rows: 250' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'github_api_url: https://ghe.example/api/v3' ${FLOW}
+#EXPECT_EXIT 0
+#SAVE_ARTIFACT ${DEFAULT_ANSWERS}
+#SAVE_ARTIFACT ${SETUP_ANSWERS}
+#SAVE_ARTIFACT ${FLOW}

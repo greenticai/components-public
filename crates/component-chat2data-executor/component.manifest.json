@@ -93,9 +93,14 @@
   },
   "secret_requirements": [
     {
-      "name": "GITHUB_TOKEN",
+      "key": "GITHUB_TOKEN",
       "required": false,
-      "description": "GitHub API token for GitHub queries"
+      "description": "GitHub API token for GitHub queries",
+      "scope": {
+        "env": "dev",
+        "tenant": "default"
+      },
+      "format": "text"
     }
   ],
   "capabilities": {
@@ -105,9 +110,22 @@
       "clocks": true
     },
     "host": {
-      "http_client": { "enabled": true },
+      "http": { "client": true, "server": false },
       "telemetry": { "scope": "node" },
-      "secrets": { "required": [] }
+      "secrets": {
+        "required": [
+          {
+            "key": "GITHUB_TOKEN",
+            "required": false,
+            "description": "GitHub API token for GitHub queries",
+            "scope": {
+              "env": "dev",
+              "tenant": "default"
+            },
+            "format": "text"
+          }
+        ]
+      }
     }
   },
   "limits": {

@@ -1,0 +1,51 @@
+id: ai.greentic.component-chat2data-renderer.gtest
+title: component-chat2data-renderer gtest
+description: Wizard add-step smoke test
+type: messaging
+start: renderer_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      renderer_default: []
+      renderer_personalized: []
+    components:
+      renderer_default:
+        abi_version: 0.6.0
+        added_at: 1774183439
+        component_id: repo://local/component-chat2data-renderer
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183439
+      renderer_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183439
+        component_id: repo://local/component-chat2data-renderer
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183439
+    secrets_hints:
+      renderer_default: []
+      renderer_personalized: []
+nodes:
+  renderer_default:
+    routing:
+    - to: renderer_personalized
+    run:
+      component: repo://local/component-chat2data-renderer
+      config: {}
+  renderer_personalized:
+    routing: out
+    run:
+      component: repo://local/component-chat2data-renderer
+      config:
+        max_list_items: 5
+        max_table_columns: 4
+        theme:
+          accent_color: '#005A9C'
+          background_color: '#F5F9FF'

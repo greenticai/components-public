@@ -1,0 +1,34 @@
+#SET PACK_DIR=/tmp/test-pack/component-chat2data-validator
+#SET FLOW=${PACK_DIR}/flows/main.ygtc
+#SET FIXTURES=${WORK_DIR}/fixtures
+#SET DEFAULT_ANSWERS=${WORK_DIR}/default.answers.json
+#SET SETUP_ANSWERS=${WORK_DIR}/setup.answers.json
+#RUN rm -rf ${PACK_DIR}
+#RUN mkdir -p /tmp/test-pack
+#WRITE ${DEFAULT_ANSWERS} <<<EOF
+{}
+EOF
+#WRITE ${SETUP_ANSWERS} <<<EOF
+{
+  "strict_mode": false
+}
+EOF
+#RUN greentic-pack new --dir ${PACK_DIR} ai.greentic.component-chat2data-validator-gtest
+#EXPECT_EXIT 0
+#RUN greentic-flow new --flow ${FLOW} --id ai.greentic.component-chat2data-validator.gtest --type messaging --name "component-chat2data-validator gtest" --description "Wizard add-step smoke test" --force
+#EXPECT_EXIT 0
+#RUN cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-validator --out ${FIXTURES} --default-answers ${DEFAULT_ANSWERS} --setup-answers ${SETUP_ANSWERS}
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id validator_default --component repo://local/component-chat2data-validator --resolver fixture://${FIXTURES} --wizard-mode default --routing-out
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id validator_personalized --component repo://local/component-chat2data-validator --resolver fixture://${FIXTURES} --wizard-mode setup --answers-file ${SETUP_ANSWERS} --routing-out --after validator_default
+#EXPECT_EXIT 0
+#RUN grep -q 'validator_default:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'validator_personalized:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'strict_mode: false' ${FLOW}
+#EXPECT_EXIT 0
+#SAVE_ARTIFACT ${DEFAULT_ANSWERS}
+#SAVE_ARTIFACT ${SETUP_ANSWERS}
+#SAVE_ARTIFACT ${FLOW}

@@ -1,0 +1,7 @@
+{
+  "step": 7,
+  "line_no": 22,
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-pack2flow/flows/main.ygtc --node-id pack2flow_personalized --component repo://local/component-pack2flow --resolver fixture:///tmp/gtest-DTiNJw/fixtures --wizard-mode setup --answers-file /tmp/gtest-DTiNJw/setup.answers.json --routing-out --after pack2flow_default",
+  "exit_code": 0,
+  "duration_ms": 53
+}

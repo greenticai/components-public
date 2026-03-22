@@ -1,0 +1,7 @@
+{
+  "step": 6,
+  "line_no": 22,
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-chat2data-validator/flows/main.ygtc --node-id validator_default --component repo://local/component-chat2data-validator --resolver fixture:///tmp/gtest-EsBZqH/fixtures --wizard-mode default --routing-out",
+  "exit_code": 0,
+  "duration_ms": 35
+}

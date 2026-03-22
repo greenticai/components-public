@@ -1,0 +1,46 @@
+id: ai.greentic.component-pack2flow.gtest
+title: component-pack2flow gtest
+description: Wizard add-step smoke test
+type: messaging
+start: pack2flow_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      pack2flow_default: []
+      pack2flow_personalized: []
+    components:
+      pack2flow_default:
+        abi_version: 0.6.0
+        added_at: 1774183439
+        component_id: repo://local/component-pack2flow
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183439
+      pack2flow_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183439
+        component_id: repo://local/component-pack2flow
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183439
+    secrets_hints:
+      pack2flow_default: []
+      pack2flow_personalized: []
+nodes:
+  pack2flow_default:
+    routing:
+    - to: pack2flow_personalized
+    run:
+      component: repo://local/component-pack2flow
+      config: {}
+  pack2flow_personalized:
+    routing: out
+    run:
+      component: repo://local/component-pack2flow
+      config: {}

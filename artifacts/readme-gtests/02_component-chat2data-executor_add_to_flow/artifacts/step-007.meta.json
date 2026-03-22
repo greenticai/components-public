@@ -1,0 +1,7 @@
+{
+  "step": 7,
+  "line_no": 26,
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-chat2data-executor/flows/main.ygtc --node-id executor_personalized --component repo://local/component-chat2data-executor --resolver fixture:///tmp/gtest-WjYIBj/fixtures --wizard-mode setup --answers-file /tmp/gtest-WjYIBj/setup.answers.json --routing-out --after executor_default",
+  "exit_code": 0,
+  "duration_ms": 36
+}

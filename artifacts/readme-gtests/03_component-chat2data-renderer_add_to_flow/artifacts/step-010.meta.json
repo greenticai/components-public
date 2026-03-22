@@ -1,0 +1,7 @@
+{
+  "step": 10,
+  "line_no": 35,
+  "command": "grep -q max_list_items: 5 /tmp/test-pack/component-chat2data-renderer/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

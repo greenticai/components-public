@@ -1,0 +1,7 @@
+{
+  "step": 5,
+  "line_no": 22,
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-executor --out /tmp/gtest-WjYIBj/fixtures --default-answers /tmp/gtest-WjYIBj/default.answers.json --setup-answers /tmp/gtest-WjYIBj/setup.answers.json",
+  "exit_code": 0,
+  "duration_ms": 141
+}

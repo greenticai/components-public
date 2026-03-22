@@ -1,0 +1,7 @@
+{
+  "step": 10,
+  "line_no": 30,
+  "command": "grep -q strict_mode: false /tmp/test-pack/component-chat2data-validator/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

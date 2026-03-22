@@ -15,17 +15,12 @@ crate-type = ["cdylib", "rlib"]
 package = "greentic:component"
 
 [package.metadata.component.target]
-path = "wit/msg2events"
-world = "component-v0-v6-v0"
+world = "greentic:component/component-v0-v6-v0@0.6.0"
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wit-bindgen = { version = "0.53", default-features = false, features = ["macros", "realloc"] }
-
-[profile.release]
-opt-level = "s"
-lto = true
-strip = true
+greentic-interfaces-guest = { workspace = true, features = ["component-v0-6", "telemetry"] }
+wit-bindgen.workspace = true

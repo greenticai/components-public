@@ -1,0 +1,7 @@
+{
+  "step": 5,
+  "line_no": 21,
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-events2msg --out /tmp/gtest-fFyFyD/fixtures --default-answers /tmp/gtest-fFyFyD/default.answers.json --setup-answers /tmp/gtest-fFyFyD/setup.answers.json",
+  "exit_code": 0,
+  "duration_ms": 165
+}

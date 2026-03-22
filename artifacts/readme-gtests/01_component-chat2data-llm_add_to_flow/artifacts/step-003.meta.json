@@ -1,0 +1,7 @@
+{
+  "step": 3,
+  "line_no": 18,
+  "command": "greentic-pack new --dir /tmp/test-pack/component-chat2data-llm ai.greentic.component-chat2data-llm-gtest",
+  "exit_code": 0,
+  "duration_ms": 13
+}

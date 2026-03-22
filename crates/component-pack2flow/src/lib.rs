@@ -2,33 +2,21 @@
 use std::collections::BTreeMap;
 
 #[cfg(target_arch = "wasm32")]
+use greentic_interfaces_guest::component_v0_6::node;
+#[cfg(target_arch = "wasm32")]
 use greentic_types::cbor::canonical;
 #[cfg(target_arch = "wasm32")]
 use greentic_types::schemas::common::schema_ir::{AdditionalProperties, SchemaIr};
-#[cfg(target_arch = "wasm32")]
-use greentic_types::schemas::component::v0_6_0::{
-    ComponentDescribe, ComponentInfo, ComponentOperation, ComponentRunInput, ComponentRunOutput,
-    I18nText, schema_hash,
-};
-#[cfg(target_arch = "wasm32")]
-mod bindings {
-    wit_bindgen::generate!({
-        path: "wit",
-        world: "component-v0-v6-v0",
-    });
-}
-#[cfg(target_arch = "wasm32")]
-use bindings::exports::greentic::component::{
-    component_descriptor, component_i18n,
-    component_qa::{self, QaMode},
-    component_runtime, component_schema,
-};
 use serde_json::{Map, Value};
 
 const COMPONENT_NAME: &str = "component-pack2flow";
 const COMPONENT_ORG: &str = "ai.greentic";
+#[cfg(target_arch = "wasm32")]
+const COMPONENT_ID: &str = "ai.greentic.component-pack2flow";
 const COMPONENT_VERSION: &str = "0.1.0";
 const DEFAULT_MAX_REDIRECTS: u64 = 3;
+#[cfg(target_arch = "wasm32")]
+const DEFAULT_OPERATION: &str = "handle_message";
 
 #[cfg(target_arch = "wasm32")]
 #[used]
@@ -39,65 +27,128 @@ static WASI_TARGET_MARKER: [u8; 13] = *b"wasm32-wasip2";
 struct Component;
 
 #[cfg(target_arch = "wasm32")]
-impl component_descriptor::Guest for Component {
-    fn get_component_info() -> Vec<u8> {
-        component_info_cbor()
+impl node::Guest for Component {
+    fn describe() -> node::ComponentDescriptor {
+        node::ComponentDescriptor {
+            name: COMPONENT_ID.to_string(),
+            version: COMPONENT_VERSION.to_string(),
+            summary: Some(
+                "Jump control component that routes payloads into target flows".to_string(),
+            ),
+            capabilities: Vec::new(),
+            ops: vec![node::Op {
+                name: DEFAULT_OPERATION.to_string(),
+                summary: Some("Emit a jump control directive to another flow".to_string()),
+                input: node::IoSchema {
+                    schema: node::SchemaSource::InlineCbor(encode_cbor(&input_schema())),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                },
+                output: node::IoSchema {
+                    schema: node::SchemaSource::InlineCbor(encode_cbor(&output_schema())),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                },
+                examples: Vec::new(),
+            }],
+            schemas: Vec::new(),
+            setup: None,
+        }
     }
 
-    fn describe() -> Vec<u8> {
-        component_descriptor_cbor()
+    fn invoke(
+        op: String,
+        envelope: node::InvocationEnvelope,
+    ) -> Result<node::InvocationResult, node::NodeError> {
+        let operation = if op.is_empty() {
+            DEFAULT_OPERATION
+        } else {
+            &op
+        };
+        let input: Value = match canonical::from_cbor(&envelope.payload_cbor) {
+            Ok(value) => value,
+            Err(error) => {
+                return Ok(node::InvocationResult {
+                    ok: true,
+                    output_cbor: encode_cbor(&error_response(&JumpError::InvalidInput(format!(
+                        "CBOR payload decode failed: {error}"
+                    )))),
+                    output_metadata_cbor: None,
+                });
+            }
+        };
+
+        let output = process_invocation(operation, &input);
+        Ok(node::InvocationResult {
+            ok: true,
+            output_cbor: encode_cbor(&output),
+            output_metadata_cbor: None,
+        })
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-impl component_schema::Guest for Component {
-    fn input_schema() -> Vec<u8> {
-        input_schema_cbor()
+mod qa_exports {
+    wit_bindgen::generate!({
+        inline: r#"
+            package greentic:component@0.6.0;
+
+            interface component-qa {
+              enum qa-mode {
+                default,
+                setup,
+                update,
+                remove,
+              }
+
+              qa-spec: func(mode: qa-mode) -> list<u8>;
+              apply-answers: func(mode: qa-mode, current-config: list<u8>, answers: list<u8>) -> list<u8>;
+            }
+
+            interface component-i18n {
+              i18n-keys: func() -> list<string>;
+            }
+
+            world wizard-support {
+              export component-qa;
+              export component-i18n;
+            }
+        "#,
+        world: "wizard-support",
+    });
+
+    pub struct WizardSupport;
+
+    impl exports::greentic::component::component_qa::Guest for WizardSupport {
+        fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
+            crate::encode_cbor(&crate::qa_spec_json(match mode {
+                exports::greentic::component::component_qa::QaMode::Default => "default",
+                exports::greentic::component::component_qa::QaMode::Setup => "setup",
+                exports::greentic::component::component_qa::QaMode::Update => "update",
+                exports::greentic::component::component_qa::QaMode::Remove => "remove",
+            }))
+        }
+
+        fn apply_answers(
+            _mode: exports::greentic::component::component_qa::QaMode,
+            current_config: Vec<u8>,
+            answers: Vec<u8>,
+        ) -> Vec<u8> {
+            crate::apply_answers_cbor(current_config, answers)
+        }
     }
 
-    fn output_schema() -> Vec<u8> {
-        output_schema_cbor()
+    impl exports::greentic::component::component_i18n::Guest for WizardSupport {
+        fn i18n_keys() -> Vec<String> {
+            crate::i18n_keys()
+        }
     }
 
-    fn config_schema() -> Vec<u8> {
-        config_schema_cbor()
-    }
+    export!(WizardSupport with_types_in self);
 }
 
 #[cfg(target_arch = "wasm32")]
-impl component_runtime::Guest for Component {
-    fn run(input: Vec<u8>, state: Vec<u8>) -> component_runtime::RunResult {
-        run_component_cbor(input, state)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl component_qa::Guest for Component {
-    fn qa_spec(mode: QaMode) -> Vec<u8> {
-        qa_spec_cbor(mode)
-    }
-
-    fn apply_answers(mode: QaMode, current_config: Vec<u8>, answers: Vec<u8>) -> Vec<u8> {
-        apply_answers_cbor(mode, current_config, answers)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl component_i18n::Guest for Component {
-    fn i18n_keys() -> Vec<String> {
-        vec![
-            "component.display_name".to_string(),
-            "operation.handle_message".to_string(),
-            "qa.default.title".to_string(),
-            "qa.setup.title".to_string(),
-            "qa.update.title".to_string(),
-            "qa.remove.title".to_string(),
-        ]
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-bindings::export!(Component with_types_in bindings);
+greentic_interfaces_guest::export_component_v060!(Component);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum JumpError {
@@ -398,95 +449,60 @@ fn config_schema() -> SchemaIr {
 }
 
 #[cfg(target_arch = "wasm32")]
-#[allow(dead_code)]
-fn component_info() -> ComponentInfo {
-    ComponentInfo {
-        id: format!("{COMPONENT_ORG}.{COMPONENT_NAME}"),
-        version: COMPONENT_VERSION.to_string(),
-        role: "tool".to_string(),
-        display_name: Some(I18nText::new(
-            "component.display_name",
-            Some(COMPONENT_NAME.to_string()),
-        )),
-    }
+fn i18n_keys() -> Vec<String> {
+    vec![
+        "component.display_name".to_string(),
+        "operation.handle_message".to_string(),
+        "qa.default.title".to_string(),
+        "qa.default.description".to_string(),
+        "qa.setup.title".to_string(),
+        "qa.setup.description".to_string(),
+        "qa.update.title".to_string(),
+        "qa.update.description".to_string(),
+        "qa.remove.title".to_string(),
+        "qa.remove.description".to_string(),
+    ]
 }
 
 #[cfg(target_arch = "wasm32")]
-fn component_info_cbor() -> Vec<u8> {
-    encode_cbor(&component_info())
-}
-
-#[cfg(target_arch = "wasm32")]
-fn component_descriptor_cbor() -> Vec<u8> {
-    let input = input_schema();
-    let output = output_schema();
-    let config = config_schema();
-    let operation = ComponentOperation {
-        id: "handle_message".to_string(),
-        display_name: Some(I18nText::new(
-            "operation.handle_message",
-            Some("Handle message".to_string()),
-        )),
-        input: ComponentRunInput {
-            schema: input.clone(),
-        },
-        output: ComponentRunOutput {
-            schema: output.clone(),
-        },
-        defaults: BTreeMap::new(),
-        redactions: Vec::new(),
-        constraints: BTreeMap::new(),
-        schema_hash: schema_hash(&input, &output, &config).expect("schema hash"),
-    };
-    let describe = ComponentDescribe {
-        info: component_info(),
-        provided_capabilities: Vec::new(),
-        required_capabilities: Vec::new(),
-        metadata: BTreeMap::new(),
-        operations: vec![operation],
-        config_schema: config,
-    };
-    encode_cbor(&describe)
-}
-
-#[cfg(target_arch = "wasm32")]
-fn input_schema_cbor() -> Vec<u8> {
-    encode_cbor(&input_schema())
-}
-
-#[cfg(target_arch = "wasm32")]
-fn output_schema_cbor() -> Vec<u8> {
-    encode_cbor(&output_schema())
-}
-
-#[cfg(target_arch = "wasm32")]
-fn config_schema_cbor() -> Vec<u8> {
-    encode_cbor(&config_schema())
-}
-
-#[cfg(target_arch = "wasm32")]
-fn qa_spec_cbor(mode: QaMode) -> Vec<u8> {
+fn qa_spec_json(mode: &str) -> Value {
     let (mode, title_key, title_fallback) = match mode {
-        QaMode::Default => ("default", "qa.default.title", "Default configuration"),
-        QaMode::Setup => ("setup", "qa.setup.title", "Setup configuration"),
-        QaMode::Update => ("update", "qa.update.title", "Update configuration"),
-        QaMode::Remove => ("remove", "qa.remove.title", "Remove configuration"),
+        "default" => ("default", "qa.default.title", "Default configuration"),
+        "setup" => ("setup", "qa.setup.title", "Setup configuration"),
+        "update" => ("update", "qa.update.title", "Update configuration"),
+        "remove" => ("remove", "qa.remove.title", "Remove configuration"),
+        _ => ("default", "qa.default.title", "Default configuration"),
     };
-    encode_cbor(&serde_json::json!({
+    serde_json::json!({
         "mode": mode,
         "title": {
             "key": title_key,
             "fallback": title_fallback,
         },
-        "description": null,
+        "description": {
+            "key": match mode {
+                "default" => "qa.default.description",
+                "setup" => "qa.setup.description",
+                "update" => "qa.update.description",
+                "remove" => "qa.remove.description",
+                _ => "qa.default.description",
+            },
+            "fallback": match mode {
+                "default" => "Review the default configuration for this component.",
+                "setup" => "Provide any initial configuration values for this component.",
+                "update" => "Adjust the existing configuration for this component.",
+                "remove" => "Confirm whether this component configuration should be removed.",
+                _ => "Review the default configuration for this component.",
+            }
+        },
         "questions": []
         ,
         "defaults": {}
-    }))
+    })
 }
 
 #[cfg(target_arch = "wasm32")]
-fn apply_answers_cbor(_mode: QaMode, current_config: Vec<u8>, answers: Vec<u8>) -> Vec<u8> {
+fn apply_answers_cbor(current_config: Vec<u8>, answers: Vec<u8>) -> Vec<u8> {
     if !current_config.is_empty() {
         return current_config;
     }
@@ -494,22 +510,6 @@ fn apply_answers_cbor(_mode: QaMode, current_config: Vec<u8>, answers: Vec<u8>) 
         return answers;
     }
     encode_cbor(&serde_json::json!({}))
-}
-
-#[cfg(target_arch = "wasm32")]
-fn run_component_cbor(input: Vec<u8>, state: Vec<u8>) -> component_runtime::RunResult {
-    let invocation: Result<Value, _> = canonical::from_cbor(&input);
-    let output = match invocation {
-        Ok(value) => process_invocation("handle_message", &value),
-        Err(error) => error_response(&JumpError::InvalidInput(format!(
-            "CBOR payload decode failed: {error}"
-        ))),
-    };
-
-    component_runtime::RunResult {
-        output: encode_cbor(&output),
-        new_state: state,
-    }
 }
 
 #[cfg(test)]

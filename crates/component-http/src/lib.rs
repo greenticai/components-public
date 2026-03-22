@@ -7,20 +7,17 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
 #[cfg(target_arch = "wasm32")]
-#[allow(clippy::too_many_arguments)]
-mod bindings {
-    wit_bindgen::generate!({ path: "wit/http", world: "component-v0-v6-v0", generate_all });
-}
-
+use greentic_interfaces_guest::component_v0_6::node;
 #[cfg(target_arch = "wasm32")]
-use bindings::greentic::component::http_client as client;
+use greentic_interfaces_guest::http_client_v1_1 as client;
 #[cfg(target_arch = "wasm32")]
-use bindings::greentic::component::logger_api;
+use greentic_interfaces_guest::secrets_store;
 #[cfg(target_arch = "wasm32")]
-use bindings::greentic::component::secrets_store;
+use greentic_interfaces_guest::telemetry_logger as logger_api;
 
 const COMPONENT_ID: &str = "http";
 const WORLD_ID: &str = "component-v0-v6-v0";
+const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_TIMEOUT_MS: u32 = 30000;
 const DEFAULT_METHOD: &str = "POST";
 
@@ -56,7 +53,13 @@ const I18N_KEYS: &[&str] = &[
     "http.schema.config.timeout_ms.title",
     "http.schema.config.timeout_ms.description",
     "http.qa.default.title",
+    "http.qa.default.description",
     "http.qa.setup.title",
+    "http.qa.setup.description",
+    "http.qa.update.title",
+    "http.qa.update.description",
+    "http.qa.remove.title",
+    "http.qa.remove.description",
     "http.qa.setup.base_url",
     "http.qa.setup.auth_type",
     "http.qa.setup.auth_token",
@@ -180,24 +183,84 @@ struct QaSpec {
 // ============================================================================
 
 #[cfg(target_arch = "wasm32")]
+#[used]
+#[unsafe(link_section = ".greentic.wasi")]
+static WASI_TARGET_MARKER: [u8; 13] = *b"wasm32-wasip2";
+
+#[cfg(target_arch = "wasm32")]
 struct Component;
 
 #[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::descriptor::Guest for Component {
-    fn describe() -> Vec<u8> {
-        canonical_cbor_bytes(&build_describe_payload())
+impl node::Guest for Component {
+    fn describe() -> node::ComponentDescriptor {
+        node::ComponentDescriptor {
+            name: COMPONENT_ID.to_string(),
+            version: COMPONENT_VERSION.to_string(),
+            summary: Some("HTTP client component with blocking and streaming support".to_string()),
+            capabilities: vec![
+                "host:http-client".to_string(),
+                "host:secrets".to_string(),
+                "host:telemetry".to_string(),
+            ],
+            ops: vec![
+                node::Op {
+                    name: "request".to_string(),
+                    summary: Some("Send a blocking HTTP request".to_string()),
+                    input: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &input_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    output: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &output_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    examples: Vec::new(),
+                },
+                node::Op {
+                    name: "stream".to_string(),
+                    summary: Some("Send an HTTP request and parse streamed responses".to_string()),
+                    input: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &input_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    output: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &output_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    examples: Vec::new(),
+                },
+            ],
+            schemas: Vec::new(),
+            setup: None,
+        }
     }
-}
 
-#[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::runtime::Guest for Component {
-    fn invoke(op: String, input_cbor: Vec<u8>) -> Vec<u8> {
-        let input: Value = match decode_cbor(&input_cbor) {
+    fn invoke(
+        op: String,
+        envelope: node::InvocationEnvelope,
+    ) -> Result<node::InvocationResult, node::NodeError> {
+        let input: Value = match decode_cbor(&envelope.payload_cbor) {
             Ok(value) => value,
             Err(err) => {
-                return canonical_cbor_bytes(
-                    &json!({"ok": false, "error": format!("invalid input cbor: {err}")}),
-                );
+                return Ok(node::InvocationResult {
+                    ok: true,
+                    output_cbor: canonical_cbor_bytes(
+                        &json!({"ok": false, "error": format!("invalid input cbor: {err}")}),
+                    ),
+                    output_metadata_cbor: None,
+                });
             }
         };
 
@@ -207,90 +270,123 @@ impl bindings::exports::greentic::component::runtime::Guest for Component {
             other => json!({"ok": false, "error": format!("unsupported op: {other}")}),
         };
 
-        canonical_cbor_bytes(&output)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::qa::Guest for Component {
-    fn qa_spec(mode: bindings::exports::greentic::component::qa::Mode) -> Vec<u8> {
-        canonical_cbor_bytes(&build_qa_spec_wasm(mode))
-    }
-
-    fn apply_answers(
-        mode: bindings::exports::greentic::component::qa::Mode,
-        answers_cbor: Vec<u8>,
-    ) -> Vec<u8> {
-        let answers: Value = match decode_cbor(&answers_cbor) {
-            Ok(value) => value,
-            Err(err) => {
-                return canonical_cbor_bytes(&ApplyAnswersResult {
-                    ok: false,
-                    config: None,
-                    error: Some(format!("invalid answers cbor: {err}")),
-                });
-            }
-        };
-
-        if mode == bindings::exports::greentic::component::qa::Mode::Setup {
-            let get_str = |key: &str| -> Option<String> {
-                answers
-                    .get(key)
-                    .and_then(Value::as_str)
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-            };
-
-            let cfg = ComponentConfig {
-                base_url: get_str("base_url"),
-                auth_type: get_str("auth_type").unwrap_or_else(default_auth_type),
-                auth_token: get_str("auth_token"),
-                api_key_header: get_str("api_key_header").unwrap_or_else(default_api_key_header),
-                timeout_ms: answers
-                    .get("timeout_ms")
-                    .and_then(Value::as_u64)
-                    .map(|v| v as u32)
-                    .unwrap_or(DEFAULT_TIMEOUT_MS),
-                default_headers: get_str("default_headers"),
-            };
-
-            return canonical_cbor_bytes(&ApplyAnswersResult {
-                ok: true,
-                config: Some(cfg),
-                error: None,
-            });
-        }
-
-        canonical_cbor_bytes(&ApplyAnswersResult {
+        Ok(node::InvocationResult {
             ok: true,
-            config: None,
-            error: None,
+            output_cbor: canonical_cbor_bytes(&output),
+            output_metadata_cbor: None,
         })
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::component_i18n::Guest for Component {
-    fn i18n_keys() -> Vec<String> {
-        I18N_KEYS.iter().map(|k| (*k).to_string()).collect()
+mod qa_exports {
+    use serde_json::Value;
+
+    wit_bindgen::generate!({
+        inline: r#"
+            package greentic:component@0.6.0;
+
+            interface component-qa {
+                enum qa-mode {
+                    default,
+                    setup,
+                    update,
+                    remove
+                }
+
+                qa-spec: func(mode: qa-mode) -> list<u8>;
+                apply-answers: func(mode: qa-mode, current-config: list<u8>, answers: list<u8>) -> list<u8>;
+            }
+
+            interface component-i18n {
+                i18n-keys: func() -> list<string>;
+            }
+
+            world wizard-support {
+                export component-qa;
+                export component-i18n;
+            }
+        "#,
+        world: "wizard-support",
+    });
+
+    pub struct WizardSupport;
+
+    impl exports::greentic::component::component_qa::Guest for WizardSupport {
+        fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
+            crate::canonical_cbor_bytes(&crate::build_qa_spec_json(match mode {
+                exports::greentic::component::component_qa::QaMode::Default => "default",
+                exports::greentic::component::component_qa::QaMode::Setup => "setup",
+                exports::greentic::component::component_qa::QaMode::Update => "update",
+                exports::greentic::component::component_qa::QaMode::Remove => "remove",
+            }))
+        }
+
+        fn apply_answers(
+            mode: exports::greentic::component::component_qa::QaMode,
+            _current_config: Vec<u8>,
+            answers: Vec<u8>,
+        ) -> Vec<u8> {
+            let answers: Value = match crate::decode_cbor(&answers) {
+                Ok(value) => value,
+                Err(err) => {
+                    return crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
+                        ok: false,
+                        config: None,
+                        error: Some(format!("invalid answers cbor: {err}")),
+                    });
+                }
+            };
+
+            if mode == exports::greentic::component::component_qa::QaMode::Setup {
+                let get_str = |key: &str| -> Option<String> {
+                    answers
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                };
+
+                let cfg = crate::ComponentConfig {
+                    base_url: get_str("base_url"),
+                    auth_type: get_str("auth_type").unwrap_or_else(crate::default_auth_type),
+                    auth_token: get_str("auth_token"),
+                    api_key_header: get_str("api_key_header")
+                        .unwrap_or_else(crate::default_api_key_header),
+                    timeout_ms: answers
+                        .get("timeout_ms")
+                        .and_then(Value::as_u64)
+                        .map(|v| v as u32)
+                        .unwrap_or(crate::DEFAULT_TIMEOUT_MS),
+                    default_headers: get_str("default_headers"),
+                };
+
+                return crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
+                    ok: true,
+                    config: Some(cfg),
+                    error: None,
+                });
+            }
+
+            crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
+                ok: true,
+                config: None,
+                error: None,
+            })
+        }
     }
 
-    fn i18n_bundle(locale: String) -> Vec<u8> {
-        let locale = if locale.trim().is_empty() {
-            "en".to_string()
-        } else {
-            locale
-        };
-        let mut messages = serde_json::Map::new();
-        for key in I18N_KEYS {
-            messages.insert((*key).to_string(), Value::String((*key).to_string()));
+    impl exports::greentic::component::component_i18n::Guest for WizardSupport {
+        fn i18n_keys() -> Vec<String> {
+            crate::I18N_KEYS.iter().map(|k| (*k).to_string()).collect()
         }
-        canonical_cbor_bytes(&json!({"locale": locale, "messages": Value::Object(messages)}))
     }
+
+    export!(WizardSupport with_types_in self);
 }
 
 #[cfg(target_arch = "wasm32")]
-bindings::export!(Component with_types_in bindings);
+greentic_interfaces_guest::export_component_v060!(Component);
 
 // ============================================================================
 // Core HTTP Logic (shared between WASM and native)
@@ -655,22 +751,19 @@ fn build_describe_payload() -> DescribePayload {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) -> QaSpec {
-    use bindings::exports::greentic::component::qa::Mode;
-
+fn build_qa_spec_json(mode: &str) -> QaSpec {
     match mode {
-        Mode::Default => QaSpec {
+        "default" => QaSpec {
             mode: "default".to_string(),
             title: i18n("http.qa.default.title"),
-            description: None,
+            description: Some(i18n("http.qa.default.description")),
             questions: Vec::new(),
             defaults: json!({}),
         },
-        Mode::Setup => QaSpec {
+        "setup" => QaSpec {
             mode: "setup".to_string(),
             title: i18n("http.qa.setup.title"),
-            description: None,
+            description: Some(i18n("http.qa.setup.description")),
             questions: vec![
                 qa_q("base_url", "http.qa.setup.base_url", false),
                 qa_q("auth_type", "http.qa.setup.auth_type", false),
@@ -683,15 +776,24 @@ fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) ->
                 "timeout_ms": DEFAULT_TIMEOUT_MS,
             }),
         },
-        Mode::Upgrade | Mode::Remove => QaSpec {
-            mode: if mode == Mode::Upgrade {
-                "upgrade"
-            } else {
-                "remove"
-            }
-            .to_string(),
+        "update" => QaSpec {
+            mode: "update".to_string(),
+            title: i18n("http.qa.update.title"),
+            description: Some(i18n("http.qa.update.description")),
+            questions: Vec::new(),
+            defaults: json!({}),
+        },
+        "remove" => QaSpec {
+            mode: "remove".to_string(),
+            title: i18n("http.qa.remove.title"),
+            description: Some(i18n("http.qa.remove.description")),
+            questions: Vec::new(),
+            defaults: json!({}),
+        },
+        _ => QaSpec {
+            mode: mode.to_string(),
             title: i18n("http.qa.default.title"),
-            description: None,
+            description: Some(i18n("http.qa.default.description")),
             questions: Vec::new(),
             defaults: json!({}),
         },

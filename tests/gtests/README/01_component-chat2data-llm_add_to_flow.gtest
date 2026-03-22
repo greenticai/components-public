@@ -1,0 +1,42 @@
+#SET PACK_DIR=/tmp/test-pack/component-chat2data-llm
+#SET FLOW=${PACK_DIR}/flows/main.ygtc
+#SET FIXTURES=${WORK_DIR}/fixtures
+#SET DEFAULT_ANSWERS=${WORK_DIR}/default.answers.json
+#SET SETUP_ANSWERS=${WORK_DIR}/setup.answers.json
+#RUN rm -rf ${PACK_DIR}
+#RUN mkdir -p /tmp/test-pack
+#WRITE ${DEFAULT_ANSWERS} <<<EOF
+{}
+EOF
+#WRITE ${SETUP_ANSWERS} <<<EOF
+{
+  "api_key": "secret:OPENAI_API_KEY",
+  "model": "gpt-4.1-mini",
+  "timeout_ms": 45000
+}
+EOF
+#RUN greentic-pack new --dir ${PACK_DIR} ai.greentic.component-chat2data-llm-gtest
+#EXPECT_EXIT 0
+#RUN greentic-flow new --flow ${FLOW} --id ai.greentic.component-chat2data-llm.gtest --type messaging --name "component-chat2data-llm gtest" --description "Wizard add-step smoke test" --force
+#EXPECT_EXIT 0
+#RUN cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-llm --out ${FIXTURES} --default-answers ${DEFAULT_ANSWERS} --setup-answers ${SETUP_ANSWERS}
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id llm_default --component repo://local/component-chat2data-llm --resolver fixture://${FIXTURES} --wizard-mode default --routing-out
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id llm_personalized --component repo://local/component-chat2data-llm --resolver fixture://${FIXTURES} --wizard-mode setup --answers-file ${SETUP_ANSWERS} --routing-out --after llm_default
+#EXPECT_EXIT 0
+#RUN grep -q 'llm_default:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'component: repo://local/component-chat2data-llm' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'llm_personalized:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'api_key: secret:OPENAI_API_KEY' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'model: gpt-4.1-mini' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'timeout_ms: 45000' ${FLOW}
+#EXPECT_EXIT 0
+#SAVE_ARTIFACT ${DEFAULT_ANSWERS}
+#SAVE_ARTIFACT ${SETUP_ANSWERS}
+#SAVE_ARTIFACT ${FLOW}

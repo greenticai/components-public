@@ -6,16 +6,13 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
 #[cfg(target_arch = "wasm32")]
-#[allow(clippy::too_many_arguments)]
-mod bindings {
-    wit_bindgen::generate!({ path: "wit/events2msg", world: "component-v0-v6-v0", generate_all });
-}
-
+use greentic_interfaces_guest::component_v0_6::node;
 #[cfg(target_arch = "wasm32")]
-use bindings::greentic::component::logger_api;
+use greentic_interfaces_guest::telemetry_logger as logger_api;
 
 const COMPONENT_ID: &str = "events2msg";
 const WORLD_ID: &str = "component-v0-v6-v0";
+const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const I18N_KEYS: &[&str] = &[
     "events2msg.op.route.title",
@@ -45,7 +42,13 @@ const I18N_KEYS: &[&str] = &[
     "events2msg.schema.config.default_channel.title",
     "events2msg.schema.config.default_channel.description",
     "events2msg.qa.default.title",
+    "events2msg.qa.default.description",
     "events2msg.qa.setup.title",
+    "events2msg.qa.setup.description",
+    "events2msg.qa.update.title",
+    "events2msg.qa.update.description",
+    "events2msg.qa.remove.title",
+    "events2msg.qa.remove.description",
     "events2msg.qa.setup.default_provider",
     "events2msg.qa.setup.default_channel",
 ];
@@ -167,24 +170,82 @@ pub struct MessagingMessage {
 // ============================================================================
 
 #[cfg(target_arch = "wasm32")]
+#[used]
+#[unsafe(link_section = ".greentic.wasi")]
+static WASI_TARGET_MARKER: [u8; 13] = *b"wasm32-wasip2";
+
+#[cfg(target_arch = "wasm32")]
 struct Component;
 
 #[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::descriptor::Guest for Component {
-    fn describe() -> Vec<u8> {
-        canonical_cbor_bytes(&build_describe_payload())
+impl node::Guest for Component {
+    fn describe() -> node::ComponentDescriptor {
+        node::ComponentDescriptor {
+            name: COMPONENT_ID.to_string(),
+            version: COMPONENT_VERSION.to_string(),
+            summary: Some(
+                "Bridge component for routing events into messaging payloads".to_string(),
+            ),
+            capabilities: vec!["host:telemetry".to_string()],
+            ops: vec![
+                node::Op {
+                    name: "route".to_string(),
+                    summary: Some("Transform an event into a messaging payload".to_string()),
+                    input: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &input_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    output: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &output_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    examples: Vec::new(),
+                },
+                node::Op {
+                    name: "validate".to_string(),
+                    summary: Some("Validate an event payload before routing".to_string()),
+                    input: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &input_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    output: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &output_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    examples: Vec::new(),
+                },
+            ],
+            schemas: Vec::new(),
+            setup: None,
+        }
     }
-}
 
-#[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::runtime::Guest for Component {
-    fn invoke(op: String, input_cbor: Vec<u8>) -> Vec<u8> {
-        let input: Value = match decode_cbor(&input_cbor) {
+    fn invoke(
+        op: String,
+        envelope: node::InvocationEnvelope,
+    ) -> Result<node::InvocationResult, node::NodeError> {
+        let input: Value = match decode_cbor(&envelope.payload_cbor) {
             Ok(value) => value,
             Err(err) => {
-                return canonical_cbor_bytes(
-                    &json!({"ok": false, "error": format!("invalid input cbor: {err}")}),
-                );
+                return Ok(node::InvocationResult {
+                    ok: true,
+                    output_cbor: canonical_cbor_bytes(
+                        &json!({"ok": false, "error": format!("invalid input cbor: {err}")}),
+                    ),
+                    output_metadata_cbor: None,
+                });
             }
         };
 
@@ -194,83 +255,115 @@ impl bindings::exports::greentic::component::runtime::Guest for Component {
             other => json!({"ok": false, "error": format!("unsupported op: {other}")}),
         };
 
-        canonical_cbor_bytes(&output)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::qa::Guest for Component {
-    fn qa_spec(mode: bindings::exports::greentic::component::qa::Mode) -> Vec<u8> {
-        canonical_cbor_bytes(&build_qa_spec_wasm(mode))
-    }
-
-    fn apply_answers(
-        mode: bindings::exports::greentic::component::qa::Mode,
-        answers_cbor: Vec<u8>,
-    ) -> Vec<u8> {
-        let answers: Value = match decode_cbor(&answers_cbor) {
-            Ok(value) => value,
-            Err(err) => {
-                return canonical_cbor_bytes(&ApplyAnswersResult {
-                    ok: false,
-                    config: None,
-                    error: Some(format!("invalid answers cbor: {err}")),
-                });
-            }
-        };
-
-        if mode == bindings::exports::greentic::component::qa::Mode::Setup {
-            let get_str = |key: &str| -> Option<String> {
-                answers
-                    .get(key)
-                    .and_then(Value::as_str)
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-            };
-
-            let cfg = ComponentConfig {
-                default_provider: get_str("default_provider"),
-                default_channel: get_str("default_channel"),
-                payload_mappings: None,
-            };
-
-            return canonical_cbor_bytes(&ApplyAnswersResult {
-                ok: true,
-                config: Some(cfg),
-                error: None,
-            });
-        }
-
-        canonical_cbor_bytes(&ApplyAnswersResult {
+        Ok(node::InvocationResult {
             ok: true,
-            config: None,
-            error: None,
+            output_cbor: canonical_cbor_bytes(&output),
+            output_metadata_cbor: None,
         })
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-impl bindings::exports::greentic::component::component_i18n::Guest for Component {
-    fn i18n_keys() -> Vec<String> {
-        I18N_KEYS.iter().map(|k| (*k).to_string()).collect()
+mod qa_exports {
+    use serde_json::Value;
+
+    wit_bindgen::generate!({
+        inline: r#"
+            package greentic:component@0.6.0;
+
+            interface component-qa {
+                enum qa-mode {
+                    default,
+                    setup,
+                    update,
+                    remove
+                }
+
+                qa-spec: func(mode: qa-mode) -> list<u8>;
+                apply-answers: func(mode: qa-mode, current-config: list<u8>, answers: list<u8>) -> list<u8>;
+            }
+
+            interface component-i18n {
+                i18n-keys: func() -> list<string>;
+            }
+
+            world wizard-support {
+                export component-qa;
+                export component-i18n;
+            }
+        "#,
+        world: "wizard-support",
+    });
+
+    pub struct WizardSupport;
+
+    impl exports::greentic::component::component_qa::Guest for WizardSupport {
+        fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
+            crate::canonical_cbor_bytes(&crate::build_qa_spec_json(match mode {
+                exports::greentic::component::component_qa::QaMode::Default => "default",
+                exports::greentic::component::component_qa::QaMode::Setup => "setup",
+                exports::greentic::component::component_qa::QaMode::Update => "update",
+                exports::greentic::component::component_qa::QaMode::Remove => "remove",
+            }))
+        }
+
+        fn apply_answers(
+            mode: exports::greentic::component::component_qa::QaMode,
+            _current_config: Vec<u8>,
+            answers: Vec<u8>,
+        ) -> Vec<u8> {
+            let answers: Value = match crate::decode_cbor(&answers) {
+                Ok(value) => value,
+                Err(err) => {
+                    return crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
+                        ok: false,
+                        config: None,
+                        error: Some(format!("invalid answers cbor: {err}")),
+                    });
+                }
+            };
+
+            if mode == exports::greentic::component::component_qa::QaMode::Setup {
+                let get_str = |key: &str| -> Option<String> {
+                    answers
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                };
+
+                let cfg = crate::ComponentConfig {
+                    default_provider: get_str("default_provider"),
+                    default_channel: get_str("default_channel"),
+                    payload_mappings: None,
+                };
+
+                return crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
+                    ok: true,
+                    config: Some(cfg),
+                    error: None,
+                });
+            }
+
+            crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
+                ok: true,
+                config: None,
+                error: None,
+            })
+        }
     }
 
-    fn i18n_bundle(locale: String) -> Vec<u8> {
-        let locale = if locale.trim().is_empty() {
-            "en".to_string()
-        } else {
-            locale
-        };
-        let mut messages = serde_json::Map::new();
-        for key in I18N_KEYS {
-            messages.insert((*key).to_string(), Value::String((*key).to_string()));
+    impl exports::greentic::component::component_i18n::Guest for WizardSupport {
+        fn i18n_keys() -> Vec<String> {
+            crate::I18N_KEYS.iter().map(|k| (*k).to_string()).collect()
         }
-        canonical_cbor_bytes(&json!({"locale": locale, "messages": Value::Object(messages)}))
     }
+
+    export!(WizardSupport with_types_in self);
 }
 
 #[cfg(target_arch = "wasm32")]
-bindings::export!(Component with_types_in bindings);
+greentic_interfaces_guest::export_component_v060!(Component);
 
 // ============================================================================
 // Core Events2Msg Logic
@@ -477,22 +570,19 @@ fn build_describe_payload() -> DescribePayload {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) -> QaSpec {
-    use bindings::exports::greentic::component::qa::Mode;
-
+fn build_qa_spec_json(mode: &str) -> QaSpec {
     match mode {
-        Mode::Default => QaSpec {
+        "default" => QaSpec {
             mode: "default".to_string(),
             title: i18n("events2msg.qa.default.title"),
-            description: None,
+            description: Some(i18n("events2msg.qa.default.description")),
             questions: Vec::new(),
             defaults: json!({}),
         },
-        Mode::Setup => QaSpec {
+        "setup" => QaSpec {
             mode: "setup".to_string(),
             title: i18n("events2msg.qa.setup.title"),
-            description: None,
+            description: Some(i18n("events2msg.qa.setup.description")),
             questions: vec![
                 qa_q(
                     "default_provider",
@@ -509,15 +599,24 @@ fn build_qa_spec_wasm(mode: bindings::exports::greentic::component::qa::Mode) ->
                 "default_provider": "webchat",
             }),
         },
-        Mode::Upgrade | Mode::Remove => QaSpec {
-            mode: if mode == Mode::Upgrade {
-                "upgrade"
-            } else {
-                "remove"
-            }
-            .to_string(),
+        "update" => QaSpec {
+            mode: "update".to_string(),
+            title: i18n("events2msg.qa.update.title"),
+            description: Some(i18n("events2msg.qa.update.description")),
+            questions: Vec::new(),
+            defaults: json!({}),
+        },
+        "remove" => QaSpec {
+            mode: "remove".to_string(),
+            title: i18n("events2msg.qa.remove.title"),
+            description: Some(i18n("events2msg.qa.remove.description")),
+            questions: Vec::new(),
+            defaults: json!({}),
+        },
+        _ => QaSpec {
+            mode: mode.to_string(),
             title: i18n("events2msg.qa.default.title"),
-            description: None,
+            description: Some(i18n("events2msg.qa.default.description")),
             questions: Vec::new(),
             defaults: json!({}),
         },

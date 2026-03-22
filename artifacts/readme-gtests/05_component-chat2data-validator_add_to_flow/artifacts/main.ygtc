@@ -1,0 +1,47 @@
+id: ai.greentic.component-chat2data-validator.gtest
+title: component-chat2data-validator gtest
+description: Wizard add-step smoke test
+type: messaging
+start: validator_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      validator_default: []
+      validator_personalized: []
+    components:
+      validator_default:
+        abi_version: 0.6.0
+        added_at: 1774183440
+        component_id: repo://local/component-chat2data-validator
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183440
+      validator_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183440
+        component_id: repo://local/component-chat2data-validator
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183440
+    secrets_hints:
+      validator_default: []
+      validator_personalized: []
+nodes:
+  validator_default:
+    routing:
+    - to: validator_personalized
+    run:
+      component: repo://local/component-chat2data-validator
+      config: {}
+  validator_personalized:
+    routing: out
+    run:
+      component: repo://local/component-chat2data-validator
+      config:
+        strict_mode: false

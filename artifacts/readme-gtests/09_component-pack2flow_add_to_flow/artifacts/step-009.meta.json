@@ -1,0 +1,7 @@
+{
+  "step": 9,
+  "line_no": 26,
+  "command": "grep -q pack2flow_personalized: /tmp/test-pack/component-pack2flow/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}

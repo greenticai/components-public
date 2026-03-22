@@ -1,0 +1,52 @@
+id: ai.greentic.component-http.gtest
+title: component-http gtest
+description: Wizard add-step smoke test
+type: messaging
+start: http_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      http_default: []
+      http_personalized: []
+    components:
+      http_default:
+        abi_version: 0.6.0
+        added_at: 1774183440
+        component_id: repo://local/component-http
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183440
+      http_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183440
+        component_id: repo://local/component-http
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183440
+    secrets_hints:
+      http_default: []
+      http_personalized: []
+nodes:
+  http_default:
+    routing:
+    - to: http_personalized
+    run:
+      component: repo://local/component-http
+      config: {}
+  http_personalized:
+    routing: out
+    run:
+      component: repo://local/component-http
+      config:
+        auth_token: secret:HTTP_TOKEN
+        auth_type: bearer
+        base_url: https://api.example.com
+        default_headers:
+          X-Team: qa
+        timeout_ms: 15000

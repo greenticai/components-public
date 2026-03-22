@@ -1,0 +1,48 @@
+id: ai.greentic.component-msg2events.gtest
+title: component-msg2events gtest
+description: Wizard add-step smoke test
+type: messaging
+start: msg2events_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      msg2events_default: []
+      msg2events_personalized: []
+    components:
+      msg2events_default:
+        abi_version: 0.6.0
+        added_at: 1774183439
+        component_id: repo://local/component-msg2events
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183439
+      msg2events_personalized:
+        abi_version: 0.6.0
+        added_at: 1774183439
+        component_id: repo://local/component-msg2events
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1774183439
+    secrets_hints:
+      msg2events_default: []
+      msg2events_personalized: []
+nodes:
+  msg2events_default:
+    routing:
+    - to: msg2events_personalized
+    run:
+      component: repo://local/component-msg2events
+      config: {}
+  msg2events_personalized:
+    routing: out
+    run:
+      component: repo://local/component-msg2events
+      config:
+        default_event_type: message.command
+        default_flow: alerts

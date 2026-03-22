@@ -1,0 +1,4 @@
+{
+  "default_flow": "alerts",
+  "default_event_type": "message.command"
+}

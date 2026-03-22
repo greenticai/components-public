@@ -1,0 +1,7 @@
+{
+  "step": 11,
+  "line_no": 34,
+  "command": "grep -q github_api_url: https://github.example/api/v3 /tmp/test-pack/component-chat2data-executor/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 2
+}

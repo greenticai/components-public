@@ -1,0 +1,40 @@
+#SET PACK_DIR=/tmp/test-pack/component-chat2data-executor
+#SET FLOW=${PACK_DIR}/flows/main.ygtc
+#SET FIXTURES=${WORK_DIR}/fixtures
+#SET DEFAULT_ANSWERS=${WORK_DIR}/default.answers.json
+#SET SETUP_ANSWERS=${WORK_DIR}/setup.answers.json
+#RUN rm -rf ${PACK_DIR}
+#RUN mkdir -p /tmp/test-pack
+#WRITE ${DEFAULT_ANSWERS} <<<EOF
+{}
+EOF
+#WRITE ${SETUP_ANSWERS} <<<EOF
+{
+  "github_token": "secret:GITHUB_TOKEN",
+  "github_api_url": "https://github.example/api/v3",
+  "timeout_ms": 45000
+}
+EOF
+#RUN greentic-pack new --dir ${PACK_DIR} ai.greentic.component-chat2data-executor-gtest
+#EXPECT_EXIT 0
+#RUN greentic-flow new --flow ${FLOW} --id ai.greentic.component-chat2data-executor.gtest --type messaging --name "component-chat2data-executor gtest" --description "Wizard add-step smoke test" --force
+#EXPECT_EXIT 0
+#RUN cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-executor --out ${FIXTURES} --default-answers ${DEFAULT_ANSWERS} --setup-answers ${SETUP_ANSWERS}
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id executor_default --component repo://local/component-chat2data-executor --resolver fixture://${FIXTURES} --wizard-mode default --routing-out
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id executor_personalized --component repo://local/component-chat2data-executor --resolver fixture://${FIXTURES} --wizard-mode setup --answers-file ${SETUP_ANSWERS} --routing-out --after executor_default
+#EXPECT_EXIT 0
+#RUN grep -q 'executor_default:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'executor_personalized:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'github_token: secret:GITHUB_TOKEN' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'github_api_url: https://github.example/api/v3' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'timeout_ms: 45000' ${FLOW}
+#EXPECT_EXIT 0
+#SAVE_ARTIFACT ${DEFAULT_ANSWERS}
+#SAVE_ARTIFACT ${SETUP_ANSWERS}
+#SAVE_ARTIFACT ${FLOW}

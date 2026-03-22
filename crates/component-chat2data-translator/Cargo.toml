@@ -1,8 +1,11 @@
 [package]
 name = "component-chat2data-translator"
-version = "0.1.0"
-edition = "2024"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+authors.workspace = true
 publish = false
 description = "Chat2Data Translator - deterministic query builder with parameterized queries"
 
@@ -10,19 +13,15 @@ description = "Chat2Data Translator - deterministic query builder with parameter
 crate-type = ["cdylib"]
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-wit-bindgen = "0.52"
+serde.workspace = true
+serde_json.workspace = true
 
 [package.metadata.component]
 package = "greentic:chat2data-translator"
 
 [package.metadata.component.target]
-path = "wit/chat2data-translator"
-world = "component-v0-v6-v0"
+world = "greentic:component/component-v0-v6-v0@0.6.0"
 
-[package.metadata.component.target.dependencies]
-"greentic:interfaces-types" = { path = "wit/chat2data-translator/deps/interfaces-types" }
-"greentic:secrets-store" = { path = "wit/chat2data-translator/deps/secrets-store" }
-"greentic:http" = { path = "wit/chat2data-translator/deps/http" }
-"greentic:telemetry" = { path = "wit/chat2data-translator/deps/telemetry" }
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+greentic-interfaces-guest = { workspace = true, features = ["component-v0-6", "telemetry"] }
+wit-bindgen.workspace = true
