@@ -2,6 +2,12 @@
 #![allow(dead_code)]
 #![allow(clippy::collapsible_if)]
 
+use greentic_types::cbor::canonical;
+use greentic_types::i18n_text::I18nText as CanonicalI18nText;
+use greentic_types::schemas::component::v0_6_0::{
+    ComponentQaSpec, QaMode as CanonicalQaMode, Question as CanonicalQuestion,
+    QuestionKind as CanonicalQuestionKind,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -198,7 +204,7 @@ impl node::Guest for Component {
             version: COMPONENT_VERSION.to_string(),
             summary: Some("HTTP client component with blocking and streaming support".to_string()),
             capabilities: vec![
-                "host:http-client".to_string(),
+                "host:http".to_string(),
                 "host:secrets".to_string(),
                 "host:telemetry".to_string(),
             ],
@@ -314,7 +320,7 @@ mod qa_exports {
 
     impl exports::greentic::component::component_qa::Guest for WizardSupport {
         fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
-            crate::canonical_cbor_bytes(&crate::build_qa_spec_json(match mode {
+            crate::canonical_cbor_bytes(&crate::canonical_qa_spec(match mode {
                 exports::greentic::component::component_qa::QaMode::Default => "default",
                 exports::greentic::component::component_qa::QaMode::Setup => "setup",
                 exports::greentic::component::component_qa::QaMode::Update => "update",
@@ -768,7 +774,15 @@ fn build_qa_spec_json(mode: &str) -> QaSpec {
                 qa_q("base_url", "http.qa.setup.base_url", false),
                 qa_q("auth_type", "http.qa.setup.auth_type", false),
                 qa_q("auth_token", "http.qa.setup.auth_token", false),
-                qa_q("timeout_ms", "http.qa.setup.timeout_ms", false),
+                QaQuestionSpec {
+                    id: "timeout_ms".to_string(),
+                    label: i18n("http.qa.setup.timeout_ms"),
+                    help: None,
+                    error: None,
+                    kind: "number".to_string(),
+                    required: false,
+                    default: None,
+                },
                 qa_q("default_headers", "http.qa.setup.default_headers", false),
             ],
             defaults: json!({
@@ -798,6 +812,61 @@ fn build_qa_spec_json(mode: &str) -> QaSpec {
             defaults: json!({}),
         },
     }
+}
+
+fn canonical_qa_spec(mode: &str) -> ComponentQaSpec {
+    qa_spec_to_canonical(&build_qa_spec_json(mode))
+}
+
+fn qa_spec_to_canonical(spec: &QaSpec) -> ComponentQaSpec {
+    ComponentQaSpec {
+        mode: qa_mode_to_canonical(&spec.mode),
+        title: i18n_to_canonical(&spec.title),
+        description: spec.description.as_ref().map(i18n_to_canonical),
+        questions: spec
+            .questions
+            .iter()
+            .map(qa_question_to_canonical)
+            .collect(),
+        defaults: serde_json::from_value(spec.defaults.clone()).unwrap_or_default(),
+    }
+}
+
+fn qa_mode_to_canonical(mode: &str) -> CanonicalQaMode {
+    match mode {
+        "setup" => CanonicalQaMode::Setup,
+        "update" => CanonicalQaMode::Update,
+        "remove" => CanonicalQaMode::Remove,
+        _ => CanonicalQaMode::Default,
+    }
+}
+
+fn qa_question_to_canonical(question: &QaQuestionSpec) -> CanonicalQuestion {
+    CanonicalQuestion {
+        id: question.id.clone(),
+        label: i18n_to_canonical(&question.label),
+        help: question.help.as_ref().map(i18n_to_canonical),
+        error: question.error.as_ref().map(i18n_to_canonical),
+        kind: qa_kind_to_canonical(&question.kind),
+        required: question.required,
+        default: question
+            .default
+            .clone()
+            .and_then(|value| serde_json::from_value(value).ok()),
+        skip_if: None,
+    }
+}
+
+fn qa_kind_to_canonical(kind: &str) -> CanonicalQuestionKind {
+    match kind {
+        "number" | "int" | "integer" | "float" => CanonicalQuestionKind::Number,
+        "bool" | "boolean" => CanonicalQuestionKind::Bool,
+        _ => CanonicalQuestionKind::Text,
+    }
+}
+
+fn i18n_to_canonical(text: &I18nText) -> CanonicalI18nText {
+    CanonicalI18nText::new(text.key.clone(), None)
 }
 
 fn input_schema() -> SchemaIr {
@@ -985,11 +1054,11 @@ fn default_timeout() -> u32 {
 }
 
 fn canonical_cbor_bytes<T: Serialize>(value: &T) -> Vec<u8> {
-    serde_json::to_vec(value).unwrap_or_default()
+    canonical::to_canonical_cbor(value).unwrap_or_default()
 }
 
 fn decode_cbor(bytes: &[u8]) -> Result<Value, String> {
-    serde_json::from_slice(bytes).map_err(|e| e.to_string())
+    canonical::from_cbor(bytes).map_err(|e| e.to_string())
 }
 
 // ============================================================================
@@ -1148,5 +1217,19 @@ mod tests {
         let auth_header = req.headers.iter().find(|(k, _)| k == "Authorization");
         assert!(auth_header.is_some());
         assert_eq!(auth_header.unwrap().1, "Bearer test-token");
+    }
+
+    #[test]
+    fn test_setup_qa_spec_uses_canonical_number_question_for_timeout() {
+        let spec = canonical_qa_spec("setup");
+        let timeout = spec
+            .questions
+            .iter()
+            .find(|question| question.id == "timeout_ms")
+            .expect("timeout question");
+
+        assert!(matches!(timeout.kind, CanonicalQuestionKind::Number));
+        let timeout_default = spec.defaults.get("timeout_ms").expect("timeout default");
+        assert_eq!(serde_json::to_value(timeout_default).unwrap(), json!(30000));
     }
 }

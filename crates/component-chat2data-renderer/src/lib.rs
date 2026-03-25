@@ -21,6 +21,12 @@
 //! - `graph` - For aggregated/statistical data (basic text representation)
 //! - `auto` - Automatically select based on data shape
 
+use greentic_types::cbor::canonical;
+use greentic_types::i18n_text::I18nText as CanonicalI18nText;
+use greentic_types::schemas::component::v0_6_0::{
+    ComponentQaSpec, QaMode as CanonicalQaMode, Question as CanonicalQuestion,
+    QuestionKind as CanonicalQuestionKind,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -346,7 +352,7 @@ mod qa_exports {
 
     impl exports::greentic::component::component_qa::Guest for WizardSupport {
         fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
-            crate::canonical_cbor_bytes(&crate::build_qa_spec(match mode {
+            crate::canonical_cbor_bytes(&crate::canonical_qa_spec(match mode {
                 exports::greentic::component::component_qa::QaMode::Default => "default",
                 exports::greentic::component::component_qa::QaMode::Setup => "setup",
                 exports::greentic::component::component_qa::QaMode::Update => "update",
@@ -1152,6 +1158,61 @@ fn build_qa_spec(mode: &str) -> QaSpec {
     }
 }
 
+fn canonical_qa_spec(mode: &str) -> ComponentQaSpec {
+    qa_spec_to_canonical(&build_qa_spec(mode))
+}
+
+fn qa_spec_to_canonical(spec: &QaSpec) -> ComponentQaSpec {
+    ComponentQaSpec {
+        mode: qa_mode_to_canonical(&spec.mode),
+        title: i18n_to_canonical(&spec.title),
+        description: spec.description.as_ref().map(i18n_to_canonical),
+        questions: spec
+            .questions
+            .iter()
+            .map(qa_question_to_canonical)
+            .collect(),
+        defaults: serde_json::from_value(spec.defaults.clone()).unwrap_or_default(),
+    }
+}
+
+fn qa_mode_to_canonical(mode: &str) -> CanonicalQaMode {
+    match mode {
+        "setup" => CanonicalQaMode::Setup,
+        "update" => CanonicalQaMode::Update,
+        "remove" => CanonicalQaMode::Remove,
+        _ => CanonicalQaMode::Default,
+    }
+}
+
+fn qa_question_to_canonical(question: &QaQuestionSpec) -> CanonicalQuestion {
+    CanonicalQuestion {
+        id: question.id.clone(),
+        label: i18n_to_canonical(&question.label),
+        help: question.help.as_ref().map(i18n_to_canonical),
+        error: question.error.as_ref().map(i18n_to_canonical),
+        kind: qa_kind_to_canonical(&question.kind),
+        required: question.required,
+        default: question
+            .default
+            .clone()
+            .and_then(|value| serde_json::from_value(value).ok()),
+        skip_if: None,
+    }
+}
+
+fn qa_kind_to_canonical(kind: &str) -> CanonicalQuestionKind {
+    match kind {
+        "number" | "int" | "integer" | "float" => CanonicalQuestionKind::Number,
+        "bool" | "boolean" => CanonicalQuestionKind::Bool,
+        _ => CanonicalQuestionKind::Text,
+    }
+}
+
+fn i18n_to_canonical(text: &I18nText) -> CanonicalI18nText {
+    CanonicalI18nText::new(text.key.clone(), None)
+}
+
 fn op(name: &str, title: &str, description: &str) -> OperationDescriptor {
     OperationDescriptor {
         name: name.to_string(),
@@ -1176,11 +1237,11 @@ fn load_config(input: &Value) -> Result<ComponentConfig, String> {
 }
 
 fn canonical_cbor_bytes<T: Serialize>(value: &T) -> Vec<u8> {
-    serde_json::to_vec(value).unwrap_or_default()
+    canonical::to_canonical_cbor(value).unwrap_or_default()
 }
 
 fn decode_cbor(bytes: &[u8]) -> Result<Value, String> {
-    serde_json::from_slice(bytes).map_err(|e| e.to_string())
+    canonical::from_cbor(bytes).map_err(|e| e.to_string())
 }
 
 #[cfg(target_arch = "wasm32")]

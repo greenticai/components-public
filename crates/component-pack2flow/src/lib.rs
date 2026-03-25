@@ -6,7 +6,11 @@ use greentic_interfaces_guest::component_v0_6::node;
 #[cfg(target_arch = "wasm32")]
 use greentic_types::cbor::canonical;
 #[cfg(target_arch = "wasm32")]
+use greentic_types::i18n_text::I18nText;
+#[cfg(target_arch = "wasm32")]
 use greentic_types::schemas::common::schema_ir::{AdditionalProperties, SchemaIr};
+#[cfg(target_arch = "wasm32")]
+use greentic_types::schemas::component::v0_6_0::{ComponentQaSpec, QaMode};
 use serde_json::{Map, Value};
 
 const COMPONENT_NAME: &str = "component-pack2flow";
@@ -65,6 +69,13 @@ impl node::Guest for Component {
         } else {
             &op
         };
+        if operation == "setup.apply_answers" {
+            return Ok(node::InvocationResult {
+                ok: true,
+                output_cbor: encode_cbor(&serde_json::json!({})),
+                output_metadata_cbor: None,
+            });
+        }
         let input: Value = match canonical::from_cbor(&envelope.payload_cbor) {
             Ok(value) => value,
             Err(error) => {
@@ -121,7 +132,7 @@ mod qa_exports {
 
     impl exports::greentic::component::component_qa::Guest for WizardSupport {
         fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
-            crate::encode_cbor(&crate::qa_spec_json(match mode {
+            crate::encode_cbor(&crate::qa_spec(match mode {
                 exports::greentic::component::component_qa::QaMode::Default => "default",
                 exports::greentic::component::component_qa::QaMode::Setup => "setup",
                 exports::greentic::component::component_qa::QaMode::Update => "update",
@@ -349,11 +360,13 @@ fn is_valid_identifier(value: &str) -> bool {
 }
 
 fn error_response(error: &JumpError) -> Value {
+    let message = error.text();
     serde_json::json!({
         "status": "error",
         "error": {
             "code": error.code(),
-            "text": error.text(),
+            "message": message,
+            "text": message,
         }
     })
 }
@@ -465,40 +478,36 @@ fn i18n_keys() -> Vec<String> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn qa_spec_json(mode: &str) -> Value {
+fn qa_spec(mode: &str) -> ComponentQaSpec {
     let (mode, title_key, title_fallback) = match mode {
-        "default" => ("default", "qa.default.title", "Default configuration"),
-        "setup" => ("setup", "qa.setup.title", "Setup configuration"),
-        "update" => ("update", "qa.update.title", "Update configuration"),
-        "remove" => ("remove", "qa.remove.title", "Remove configuration"),
-        _ => ("default", "qa.default.title", "Default configuration"),
+        "setup" => (QaMode::Setup, "qa.setup.title", "Setup configuration"),
+        "update" => (QaMode::Update, "qa.update.title", "Update configuration"),
+        "remove" => (QaMode::Remove, "qa.remove.title", "Remove configuration"),
+        _ => (QaMode::Default, "qa.default.title", "Default configuration"),
     };
-    serde_json::json!({
-        "mode": mode,
-        "title": {
-            "key": title_key,
-            "fallback": title_fallback,
-        },
-        "description": {
-            "key": match mode {
-                "default" => "qa.default.description",
-                "setup" => "qa.setup.description",
-                "update" => "qa.update.description",
-                "remove" => "qa.remove.description",
-                _ => "qa.default.description",
-            },
-            "fallback": match mode {
-                "default" => "Review the default configuration for this component.",
-                "setup" => "Provide any initial configuration values for this component.",
-                "update" => "Adjust the existing configuration for this component.",
-                "remove" => "Confirm whether this component configuration should be removed.",
-                _ => "Review the default configuration for this component.",
-            }
-        },
-        "questions": []
-        ,
-        "defaults": {}
-    })
+    let description_key = match mode {
+        QaMode::Default => "qa.default.description",
+        QaMode::Setup => "qa.setup.description",
+        QaMode::Update => "qa.update.description",
+        QaMode::Remove => "qa.remove.description",
+    };
+    let description_fallback = match mode {
+        QaMode::Default => "Review the default configuration for this component.",
+        QaMode::Setup => "Provide any initial configuration values for this component.",
+        QaMode::Update => "Adjust the existing configuration for this component.",
+        QaMode::Remove => "Confirm whether this component configuration should be removed.",
+    };
+
+    ComponentQaSpec {
+        mode,
+        title: I18nText::new(title_key, Some(title_fallback.to_string())),
+        description: Some(I18nText::new(
+            description_key,
+            Some(description_fallback.to_string()),
+        )),
+        questions: Vec::new(),
+        defaults: BTreeMap::new(),
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -623,5 +632,12 @@ mod tests {
         let json: Value = serde_json::from_str(&output).expect("valid json");
         assert_eq!(json["status"], "error");
         assert_eq!(json["error"]["code"], "invalid_input");
+    }
+
+    #[test]
+    fn error_payload_includes_standard_message_field() {
+        let output = error_response(&JumpError::InvalidInput("decode failed".to_string()));
+        assert_eq!(output["error"]["message"], "decode failed");
+        assert_eq!(output["error"]["text"], "decode failed");
     }
 }

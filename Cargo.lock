@@ -119,6 +119,7 @@ name = "component-chat2data-executor"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -129,6 +130,7 @@ name = "component-chat2data-llm"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -139,6 +141,7 @@ name = "component-chat2data-renderer"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -149,6 +152,7 @@ name = "component-chat2data-translator"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -159,6 +163,7 @@ name = "component-chat2data-validator"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -169,6 +174,7 @@ name = "component-events2msg"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -179,6 +185,7 @@ name = "component-http"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -189,6 +196,7 @@ name = "component-msg2events"
 version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
