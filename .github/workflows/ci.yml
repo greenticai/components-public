@@ -76,9 +76,49 @@ jobs:
           path: artifacts/readme-gtests
           if-no-files-found: ignore
 
-  publish:
+  publish-tools:
     runs-on: ubuntu-latest
     needs: [rust, gtests]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.91.0
+          targets: wasm32-wasip2
+      - name: Restore cargo-component cache
+        id: cargo-component-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-component
+            ~/.cargo/.crates2.json
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-component-0.21.1
+      - name: Install cargo-component
+        if: steps.cargo-component-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-component --locked --version 0.21.1
+      - name: Save cargo-component cache
+        if: steps.cargo-component-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-component
+            ~/.cargo/.crates2.json
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-component-0.21.1
+      - name: Upload cargo-component binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-component-bin
+          path: ~/.cargo/bin/cargo-component
+          if-no-files-found: error
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [rust, gtests, publish-tools]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
@@ -97,8 +137,15 @@ jobs:
         with:
           toolchain: 1.91.0
           targets: wasm32-wasip2
-      - name: Install cargo-component
-        run: cargo install cargo-component --locked
+      - name: Download cargo-component binary
+        uses: actions/download-artifact@v4
+        with:
+          name: cargo-component-bin
+          path: ~/.cargo/bin
+      - name: Add cargo bin to PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Ensure cargo-component is executable
+        run: chmod +x ~/.cargo/bin/cargo-component
       - name: Install oras
         uses: oras-project/setup-oras@v1
       - name: Build wasm
