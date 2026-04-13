@@ -1,0 +1,14 @@
+name: dev-publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: greenticai/.github/.github/workflows/wasm-component-ci.yml@main
+    with:
+      wasm-build-args: "--target wasm32-wasip2"
+      validate-component: false
