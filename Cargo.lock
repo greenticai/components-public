@@ -186,6 +186,7 @@ version = "0.1.0"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
+ "http-core",
  "serde",
  "serde_json",
  "wit-bindgen",

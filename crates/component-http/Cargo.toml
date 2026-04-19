@@ -21,6 +21,7 @@ world = "greentic:component/component-v0-v6-v0@0.6.0"
 serde.workspace = true
 serde_json.workspace = true
 greentic-types.workspace = true
+http-core = { path = "../http-core" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 greentic-interfaces-guest = { workspace = true, features = ["component-v0-6", "http-client-v1-1", "secrets", "telemetry"] }
