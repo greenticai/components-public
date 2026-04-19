@@ -4,29 +4,45 @@
   "kind": "DesignExtension",
   "metadata": {
     "id": "greentic.http",
-    "name": "http-extension",
+    "name": "HTTP Client",
     "version": "0.1.0",
-    "summary": "A Greentic Designer design extension.",
-    "author": {
-      "name": "Greentic"
-    },
-    "license": "MIT"
+    "summary": "Generate and validate HTTP call nodes for Greentic flows",
+    "description": "Teaches the Designer LLM to generate YGTc HTTP nodes from natural language, curl commands, or card submit contexts. Wraps component-http runtime — does not make HTTP calls itself.",
+    "author": { "name": "Greentic", "email": "team@greentic.ai" },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": ["http", "api", "rest", "curl", "design-extension"]
   },
   "engine": {
-    "greenticDesigner": "^0.1.0",
+    "greenticDesigner": ">=0.6.0",
     "extRuntime": "^0.1.0"
   },
   "capabilities": {
-    "offered": [],
+    "offered": [
+      { "id": "greentic:http/node-generator", "version": "1.0.0" },
+      { "id": "greentic:http/validate",       "version": "1.0.0" },
+      { "id": "greentic:http/curl-import",    "version": "1.0.0" }
+    ],
     "required": []
   },
   "runtime": {
     "component": "extension.wasm",
+    "memoryLimitMB": 32,
     "permissions": {
       "network": [],
       "secrets": [],
       "callExtensionKinds": []
     }
   },
-  "contributions": {}
+  "contributions": {
+    "schemas": ["schemas/http-node-v1.json"],
+    "prompts": ["prompts/rules.md", "prompts/examples.md"],
+    "tools": [
+      { "name": "generate_http_node",         "export": "greentic:extension-design/tools.invoke-tool" },
+      { "name": "validate_http_config",       "export": "greentic:extension-design/validation.validate-content" },
+      { "name": "curl_to_node",               "export": "greentic:extension-design/tools.invoke-tool" },
+      { "name": "suggest_auth",               "export": "greentic:extension-design/tools.invoke-tool" },
+      { "name": "generate_from_card_submit",  "export": "greentic:extension-design/tools.invoke-tool" }
+    ]
+  }
 }
