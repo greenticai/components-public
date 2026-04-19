@@ -1,0 +1,32 @@
+{
+  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
+  "apiVersion": "greentic.ai/v1",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.http",
+    "name": "http-extension",
+    "version": "0.1.0",
+    "summary": "A Greentic Designer design extension.",
+    "author": {
+      "name": "Greentic"
+    },
+    "license": "MIT"
+  },
+  "engine": {
+    "greenticDesigner": "^0.1.0",
+    "extRuntime": "^0.1.0"
+  },
+  "capabilities": {
+    "offered": [],
+    "required": []
+  },
+  "runtime": {
+    "component": "extension.wasm",
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    }
+  },
+  "contributions": {}
+}

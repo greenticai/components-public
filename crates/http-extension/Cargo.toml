@@ -1,0 +1,23 @@
+[package]
+name = "http-extension"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Greentic"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen-rt = { version = "0.35", features = ["bitflags"] }
+
+[package.metadata.component]
+package = "greentic:http"
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"greentic:extension-base" = { path = "wit/deps/greentic/extension-base" }
+"greentic:extension-host" = { path = "wit/deps/greentic/extension-host" }
+"greentic:extension-design" = { path = "wit/deps/greentic/extension-design" }
