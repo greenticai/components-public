@@ -1,6 +1,7 @@
 //! Tool dispatch layer for the HTTP DesignExtension.
 pub mod generate;
-// Other tool modules added in Tasks 14-17.
+pub mod validate;
+// Other tool modules added in Tasks 15-17.
 
 pub const RUNTIME_VERSION: &str = env!("GREENTIC_HTTP_RUNTIME_VERSION");
 
