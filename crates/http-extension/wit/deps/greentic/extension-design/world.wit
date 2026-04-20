@@ -1,0 +1,67 @@
+package greentic:extension-design@0.1.0;
+
+interface tools {
+  use greentic:extension-base/types@0.1.0.{extension-error};
+  record tool-definition {
+    name: string,
+    description: string,
+    input-schema-json: string,
+    output-schema-json: option<string>,
+  }
+  list-tools: func() -> list<tool-definition>;
+  invoke-tool: func(name: string, args-json: string) -> result<string, extension-error>;
+}
+
+interface validation {
+  use greentic:extension-base/types@0.1.0.{diagnostic};
+  record validate-result {
+    valid: bool,
+    diagnostics: list<diagnostic>,
+  }
+  validate-content: func(content-type: string, content-json: string) -> validate-result;
+}
+
+interface prompting {
+  record prompt-fragment {
+    section: string,
+    content-markdown: string,
+    priority: u32,
+  }
+  system-prompt-fragments: func() -> list<prompt-fragment>;
+}
+
+interface knowledge {
+  use greentic:extension-base/types@0.1.0.{extension-error};
+  record entry-summary {
+    id: string,
+    title: string,
+    category: string,
+    tags: list<string>,
+  }
+  record entry {
+    id: string,
+    title: string,
+    category: string,
+    tags: list<string>,
+    content-json: string,
+  }
+  list-entries: func(category-filter: option<string>) -> list<entry-summary>;
+  get-entry: func(id: string) -> result<entry, extension-error>;
+  suggest-entries: func(query: string, limit: u32) -> list<entry-summary>;
+}
+
+world design-extension {
+  import greentic:extension-base/types@0.1.0;
+  import greentic:extension-host/logging@0.1.0;
+  import greentic:extension-host/i18n@0.1.0;
+  import greentic:extension-host/secrets@0.1.0;
+  import greentic:extension-host/broker@0.1.0;
+  import greentic:extension-host/http@0.1.0;
+
+  export greentic:extension-base/manifest@0.1.0;
+  export greentic:extension-base/lifecycle@0.1.0;
+  export tools;
+  export validation;
+  export prompting;
+  export knowledge;
+}

@@ -1,0 +1,31 @@
+name: Publish HTTP Extension
+
+on:
+  push:
+    tags: ['ext-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Extension version to publish (must match describe.json)'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify publisher prefix
+        run: bash ci/check_publisher_prefix.sh greentic greentic.http
+        env:
+          GREENTIC_STORE_URL: ${{ vars.GREENTIC_STORE_URL }}
+          GREENTIC_STORE_TOKEN: ${{ secrets.GREENTIC_STORE_TOKEN }}
+      - name: Publish via designer-extension-action
+        uses: greenticai/greentic-designer-extension-action@v1
+        with:
+          extension-dir: crates/http-extension
+          version-from-tag: ${{ github.event_name == 'push' }}
+        env:
+          GREENTIC_STORE_URL: ${{ vars.GREENTIC_STORE_URL }}
+          GREENTIC_STORE_TOKEN: ${{ secrets.GREENTIC_STORE_TOKEN }}

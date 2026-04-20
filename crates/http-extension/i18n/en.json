@@ -1,0 +1,10 @@
+{
+  "extension.name": "HTTP Client",
+  "extension.description": "A Greentic Designer design extension.",
+  "extension.summary": "Generate and validate HTTP call nodes for Greentic flows",
+  "tool.generate_http_node.title": "Generate HTTP Node",
+  "tool.validate_http_config.title": "Validate HTTP Node",
+  "tool.curl_to_node.title": "Import from curl",
+  "tool.suggest_auth.title": "Suggest Auth",
+  "tool.generate_from_card_submit.title": "Generate from Card Submit"
+}

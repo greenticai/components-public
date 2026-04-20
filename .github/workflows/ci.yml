@@ -48,7 +48,7 @@ jobs:
       - name: Install Greentic CLIs
         run: |
           cargo binstall --no-confirm cargo-component
-          cargo binstall --no-confirm greentic-pack greentic-flow greentic-integration-tester
+          cargo binstall --no-confirm greentic-pack greentic-flow@0.4.70 greentic-integration-tester
       - name: Save cargo binaries cache
         if: always()
         uses: actions/cache/save@v4

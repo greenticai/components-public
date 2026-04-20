@@ -430,6 +430,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-extension"
+version = "0.1.0"
+dependencies = [
+ "http-core",
+ "serde",
+ "serde_json",
+ "wit-bindgen-rt",
+]
+
+[[package]]
 name = "id-arena"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -812,6 +822,15 @@ dependencies = [
  "anyhow",
  "heck",
  "wit-parser",
+]
+
+[[package]]
+name = "wit-bindgen-rt"
+version = "0.35.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "605d5562e971a823cf5a550a9d69cb7144e9b4969a810043127175517a4e1865"
+dependencies = [
+ "bitflags",
 ]
 
 [[package]]
