@@ -14,6 +14,7 @@ use serde_json::Value;
 
 const PROMPT_RULES: &str = include_str!("../prompts/rules.md");
 const PROMPT_EXAMPLES: &str = include_str!("../prompts/examples.md");
+const PROMPT_FLOW_INTEGRATION: &str = include_str!("../prompts/flow-integration.md");
 
 struct Component;
 
@@ -139,6 +140,11 @@ impl prompting::Guest for Component {
                 section: "examples".into(),
                 content_markdown: PROMPT_EXAMPLES.into(),
                 priority: 50,
+            },
+            prompting::PromptFragment {
+                section: "flow-integration".into(),
+                content_markdown: PROMPT_FLOW_INTEGRATION.into(),
+                priority: 90,
             },
         ]
     }
