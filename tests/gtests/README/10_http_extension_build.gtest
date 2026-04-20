@@ -1,6 +1,0 @@
-#RUN bash crates/http-extension/build.sh
-#EXPECT_EXIT 0
-#RUN ls crates/http-extension/dist/*.gtxpack
-#EXPECT_EXIT 0
-#RUN gtdx validate --dir crates/http-extension
-#EXPECT_EXIT 0

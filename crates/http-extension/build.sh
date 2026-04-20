@@ -1,35 +1,54 @@
 #!/usr/bin/env bash
 # Build greentic.http extension and produce .gtxpack in ./dist/.
-# Run `gtdx publish` (without --dry-run) to upload to a registry.
+# Does not require gtdx. For full publish flow (with auth + signing),
+# use `gtdx publish` directly or the `greenticai/greentic-designer-extension-action` CI action.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$DIR/../.." && pwd)"
-cd "$DIR"
 
-VERSION="$(jq -r .metadata.version describe.json)"
+VERSION="$(jq -r .metadata.version "$DIR/describe.json")"
 echo "==> Building http-extension v${VERSION} (wasm32-wasip2)..."
 
-# Build workspace from root so WASM is created in workspace target directory
 cd "$WORKSPACE_ROOT"
 cargo component build --release --package http-extension
 
-# Copy WASM to local target directory for gtdx to find
-mkdir -p "$DIR/target/wasm32-wasip1/release"
-cp target/wasm32-wasip1/release/http_extension.wasm "$DIR/target/wasm32-wasip1/release/" 2>/dev/null || true
-
-# Publish from crate directory
-cd "$DIR"
-gtdx publish --dry-run --dist ./dist
-
-# Look for the produced .gtxpack (may be publish-staging.gtxpack or greentic.http-VERSION.gtxpack)
-PKG="$(find ./dist -maxdepth 1 -type f -name '*.gtxpack' | sort | head -n1)"
-
-if [ -z "${PKG:-}" ] || [ ! -f "${PKG}" ]; then
-    echo "ERROR: gtdx publish --dry-run did not produce a .gtxpack in ./dist/"
-    ls -la ./dist/ || true
+# cargo-component writes to wasm32-wasip1 target triple even when the WIT world is wasip2
+WASM_SRC=""
+for candidate in \
+    "$WORKSPACE_ROOT/target/wasm32-wasip1/release/http_extension.wasm" \
+    "$WORKSPACE_ROOT/target/wasm32-wasip2/release/http_extension.wasm" \
+    "$DIR/target/wasm32-wasip1/release/http_extension.wasm" \
+    "$DIR/target/wasm32-wasip2/release/http_extension.wasm"; do
+    if [ -f "$candidate" ]; then
+        WASM_SRC="$candidate"
+        break
+    fi
+done
+if [ -z "$WASM_SRC" ]; then
+    echo "ERROR: built wasm not found in any expected target path"
     exit 1
 fi
 
-echo "==> Built: ${PKG}"
-ls -lh "${PKG}"
+cd "$DIR"
+mkdir -p dist
+cp "$WASM_SRC" extension.wasm
+
+PKG_NAME="greentic.http-${VERSION}.gtxpack"
+PKG="dist/${PKG_NAME}"
+rm -f "$PKG"
+
+TMP_ZIP="dist/${PKG_NAME}.zip"
+rm -f "$TMP_ZIP"
+zip -qr "$TMP_ZIP" \
+    extension.wasm \
+    describe.json \
+    prompts \
+    schemas \
+    i18n
+mv "$TMP_ZIP" "$PKG"
+
+rm -f extension.wasm
+
+echo "==> Built: $DIR/$PKG"
+ls -lh "$PKG"

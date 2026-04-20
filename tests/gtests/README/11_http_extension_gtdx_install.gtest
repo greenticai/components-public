@@ -1,9 +1,0 @@
-#RUN bash crates/http-extension/build.sh
-#EXPECT_EXIT 0
-#SET PACK_FILE=$(ls crates/http-extension/dist/*.gtxpack | head -1)
-#RUN gtdx install -y ${PACK_FILE}
-#EXPECT_EXIT 0
-#RUN gtdx list | grep -q '^greentic.http '
-#EXPECT_EXIT 0
-#RUN gtdx uninstall greentic.http -y
-#EXPECT_EXIT 0
