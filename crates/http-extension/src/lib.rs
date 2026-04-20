@@ -6,8 +6,12 @@
 #[allow(warnings)]
 mod bindings;
 
+pub mod tools;
+
 use bindings::exports::greentic::extension_base::{lifecycle, manifest};
-use bindings::exports::greentic::extension_design::{knowledge, prompting, tools, validation};
+use bindings::exports::greentic::extension_design::{
+    knowledge, prompting, tools as wit_tools, validation,
+};
 use bindings::greentic::extension_base::types;
 
 struct Component;
@@ -44,16 +48,13 @@ impl lifecycle::Guest for Component {
 }
 
 // ---- extension-design/tools ----
-impl tools::Guest for Component {
-    fn list_tools() -> Vec<tools::ToolDefinition> {
+impl wit_tools::Guest for Component {
+    fn list_tools() -> Vec<wit_tools::ToolDefinition> {
         // TODO: return the list of tools the designer may invoke.
         Vec::new()
     }
 
-    fn invoke_tool(
-        name: String,
-        _args_json: String,
-    ) -> Result<String, types::ExtensionError> {
+    fn invoke_tool(name: String, _args_json: String) -> Result<String, types::ExtensionError> {
         // TODO: dispatch on `name` and return a JSON-encoded result.
         Err(types::ExtensionError::InvalidInput(format!(
             "unknown tool: {name}"
@@ -85,9 +86,7 @@ impl prompting::Guest for Component {
 
 // ---- extension-design/knowledge ----
 impl knowledge::Guest for Component {
-    fn list_entries(
-        _category_filter: Option<String>,
-    ) -> Vec<knowledge::EntrySummary> {
+    fn list_entries(_category_filter: Option<String>) -> Vec<knowledge::EntrySummary> {
         // TODO: return the knowledge entries this extension offers.
         Vec::new()
     }
@@ -99,10 +98,7 @@ impl knowledge::Guest for Component {
         )))
     }
 
-    fn suggest_entries(
-        _query: String,
-        _limit: u32,
-    ) -> Vec<knowledge::EntrySummary> {
+    fn suggest_entries(_query: String, _limit: u32) -> Vec<knowledge::EntrySummary> {
         // TODO: rank knowledge entries for `query`.
         Vec::new()
     }

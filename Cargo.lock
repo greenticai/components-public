@@ -433,6 +433,9 @@ dependencies = [
 name = "http-extension"
 version = "0.1.0"
 dependencies = [
+ "http-core",
+ "serde",
+ "serde_json",
  "wit-bindgen-rt",
 ]
 

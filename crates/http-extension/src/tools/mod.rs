@@ -1,0 +1,9 @@
+//! Tool dispatch layer for the HTTP DesignExtension.
+pub mod generate;
+// Other tool modules added in Tasks 14-17.
+
+pub const RUNTIME_VERSION: &str = env!("GREENTIC_HTTP_RUNTIME_VERSION");
+
+pub fn runtime_component_ref() -> String {
+    format!("oci://ghcr.io/greenticai/component/component-http:{RUNTIME_VERSION}")
+}
