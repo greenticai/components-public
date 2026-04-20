@@ -1,5 +1,4 @@
 /target
 /dist
-/src/bindings.rs
 *.gtxpack
 .DS_Store

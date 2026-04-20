@@ -7,7 +7,7 @@ authors = ["Greentic"]
 build = "build.rs"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wit-bindgen-rt = { version = "0.35", features = ["bitflags"] }
