@@ -1,7 +1,4 @@
 // Design extension guest for greentic.http.
-//
-// This scaffold implements every export required by the extension-design
-// contract as a TODO stub. Replace each body with real logic before shipping.
 
 #[allow(warnings)]
 mod bindings;
@@ -13,6 +10,7 @@ use bindings::exports::greentic::extension_design::{
     knowledge, prompting, tools as wit_tools, validation,
 };
 use bindings::greentic::extension_base::types;
+use serde_json::Value;
 
 struct Component;
 
@@ -38,40 +36,76 @@ impl manifest::Guest for Component {
 // ---- extension-base/lifecycle ----
 impl lifecycle::Guest for Component {
     fn init(_config_json: String) -> Result<(), types::ExtensionError> {
-        // TODO: read configuration from `config_json` and initialize state.
         Ok(())
     }
 
-    fn shutdown() {
-        // TODO: release any resources the extension owns.
-    }
+    fn shutdown() {}
 }
 
 // ---- extension-design/tools ----
 impl wit_tools::Guest for Component {
     fn list_tools() -> Vec<wit_tools::ToolDefinition> {
-        // TODO: return the list of tools the designer may invoke.
-        Vec::new()
+        crate::tools::list_tools()
+            .into_iter()
+            .map(|t| wit_tools::ToolDefinition {
+                name: t.name,
+                description: t.description,
+                input_schema_json: t.input_schema_json,
+                output_schema_json: t.output_schema_json,
+            })
+            .collect()
     }
 
-    fn invoke_tool(name: String, _args_json: String) -> Result<String, types::ExtensionError> {
-        // TODO: dispatch on `name` and return a JSON-encoded result.
-        Err(types::ExtensionError::InvalidInput(format!(
-            "unknown tool: {name}"
-        )))
+    fn invoke_tool(name: String, args_json: String) -> Result<String, types::ExtensionError> {
+        crate::tools::invoke_tool(&name, &args_json).map_err(types::ExtensionError::InvalidInput)
     }
 }
 
 // ---- extension-design/validation ----
 impl validation::Guest for Component {
-    fn validate_content(
-        _content_type: String,
-        _content_json: String,
-    ) -> validation::ValidateResult {
-        // TODO: run domain-specific validation and emit diagnostics.
+    fn validate_content(content_type: String, content_json: String) -> validation::ValidateResult {
+        if content_type != "http-node" {
+            return validation::ValidateResult {
+                valid: false,
+                diagnostics: vec![types::Diagnostic {
+                    severity: types::Severity::Error,
+                    code: "unsupported-content-type".into(),
+                    message: format!("this extension handles 'http-node', got '{content_type}'"),
+                    path: None,
+                }],
+            };
+        }
+        let node: Value = match serde_json::from_str(&content_json) {
+            Ok(v) => v,
+            Err(e) => {
+                return validation::ValidateResult {
+                    valid: false,
+                    diagnostics: vec![types::Diagnostic {
+                        severity: types::Severity::Error,
+                        code: "json-parse".into(),
+                        message: e.to_string(),
+                        path: None,
+                    }],
+                };
+            }
+        };
+        let (valid, diags) = crate::tools::validate::validate_http_config(&node);
+        let wit_diags = diags
+            .into_iter()
+            .map(|d| types::Diagnostic {
+                severity: match d.severity {
+                    crate::tools::validate::Severity::Error => types::Severity::Error,
+                    crate::tools::validate::Severity::Warning => types::Severity::Warning,
+                    crate::tools::validate::Severity::Info => types::Severity::Info,
+                },
+                code: d.code,
+                message: d.message,
+                path: d.path,
+            })
+            .collect();
         validation::ValidateResult {
-            valid: true,
-            diagnostics: Vec::new(),
+            valid,
+            diagnostics: wit_diags,
         }
     }
 }
@@ -79,7 +113,6 @@ impl validation::Guest for Component {
 // ---- extension-design/prompting ----
 impl prompting::Guest for Component {
     fn system_prompt_fragments() -> Vec<prompting::PromptFragment> {
-        // TODO: contribute prompt fragments for the designer LLM context.
         Vec::new()
     }
 }
@@ -87,19 +120,16 @@ impl prompting::Guest for Component {
 // ---- extension-design/knowledge ----
 impl knowledge::Guest for Component {
     fn list_entries(_category_filter: Option<String>) -> Vec<knowledge::EntrySummary> {
-        // TODO: return the knowledge entries this extension offers.
         Vec::new()
     }
 
     fn get_entry(id: String) -> Result<knowledge::Entry, types::ExtensionError> {
-        // TODO: look up and return the knowledge entry.
         Err(types::ExtensionError::InvalidInput(format!(
             "unknown entry: {id}"
         )))
     }
 
     fn suggest_entries(_query: String, _limit: u32) -> Vec<knowledge::EntrySummary> {
-        // TODO: rank knowledge entries for `query`.
         Vec::new()
     }
 }
