@@ -12,6 +12,9 @@ use bindings::exports::greentic::extension_design::{
 use bindings::greentic::extension_base::types;
 use serde_json::Value;
 
+const PROMPT_RULES: &str = include_str!("../prompts/rules.md");
+const PROMPT_EXAMPLES: &str = include_str!("../prompts/examples.md");
+
 struct Component;
 
 // ---- extension-base/manifest ----
@@ -25,7 +28,20 @@ impl manifest::Guest for Component {
     }
 
     fn get_offered() -> Vec<types::CapabilityRef> {
-        Vec::new()
+        vec![
+            types::CapabilityRef {
+                id: "greentic:http/node-generator".into(),
+                version: "1.0.0".into(),
+            },
+            types::CapabilityRef {
+                id: "greentic:http/validate".into(),
+                version: "1.0.0".into(),
+            },
+            types::CapabilityRef {
+                id: "greentic:http/curl-import".into(),
+                version: "1.0.0".into(),
+            },
+        ]
     }
 
     fn get_required() -> Vec<types::CapabilityRef> {
@@ -113,7 +129,18 @@ impl validation::Guest for Component {
 // ---- extension-design/prompting ----
 impl prompting::Guest for Component {
     fn system_prompt_fragments() -> Vec<prompting::PromptFragment> {
-        Vec::new()
+        vec![
+            prompting::PromptFragment {
+                section: "rules".into(),
+                content_markdown: PROMPT_RULES.into(),
+                priority: 100,
+            },
+            prompting::PromptFragment {
+                section: "examples".into(),
+                content_markdown: PROMPT_EXAMPLES.into(),
+                priority: 50,
+            },
+        ]
     }
 }
 
@@ -131,6 +158,28 @@ impl knowledge::Guest for Component {
 
     fn suggest_entries(_query: String, _limit: u32) -> Vec<knowledge::EntrySummary> {
         Vec::new()
+    }
+}
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod prompt_tests {
+    #[test]
+    fn rules_md_mentions_secret_refs_and_timeout_defaults() {
+        let s = include_str!("../prompts/rules.md");
+        assert!(s.contains("secret:"));
+        assert!(s.contains("15000") || s.contains("15 s"));
+        assert!(s.contains("60000") || s.contains("60 s"));
+    }
+
+    #[test]
+    fn examples_md_has_at_least_three_samples() {
+        let s = include_str!("../prompts/examples.md");
+        let sample_count = s.matches("### Example").count();
+        assert!(
+            sample_count >= 3,
+            "expected >= 3 examples, got {sample_count}"
+        );
     }
 }
 
