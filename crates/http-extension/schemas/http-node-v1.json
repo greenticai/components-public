@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://greentic.ai/schemas/http-node-v1.json",
+  "title": "Greentic HTTP Node",
+  "type": "object",
+  "required": ["node_id", "component", "config", "inputs"],
+  "properties": {
+    "node_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "component": {
+      "type": "string",
+      "pattern": "^oci://"
+    },
+    "config": {
+      "type": "object",
+      "required": ["base_url", "auth_type", "timeout_ms"],
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "auth_type": {
+          "enum": ["none", "bearer", "api_key", "basic"]
+        },
+        "auth_token": {
+          "type": ["string", "null"]
+        },
+        "api_key_header": {
+          "type": "string"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000
+        },
+        "default_headers": {
+          "type": ["object", "null"]
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]
+        },
+        "path": {
+          "type": "string"
+        },
+        "body_template": {
+          "type": "string"
+        }
+      }
+    },
+    "rationale": {
+      "type": "string"
+    },
+    "mapping": {
+      "type": "object"
+    },
+    "diagnostics": {
+      "type": "array"
+    }
+  }
+}
