@@ -45,7 +45,8 @@ zip -qr "$TMP_ZIP" \
     describe.json \
     prompts \
     schemas \
-    i18n
+    i18n \
+    $([ -d assets ] && echo assets)
 mv "$TMP_ZIP" "$PKG"
 
 rm -f extension.wasm
