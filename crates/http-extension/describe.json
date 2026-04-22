@@ -11,7 +11,8 @@
     "author": { "name": "Greentic", "email": "team@greentic.ai" },
     "license": "MIT",
     "repository": "https://github.com/greenticai/components-public",
-    "keywords": ["http", "api", "rest", "curl", "design-extension"]
+    "keywords": ["http", "api", "rest", "curl", "design-extension"],
+    "icon": "assets/icon.svg"
   },
   "engine": {
     "greenticDesigner": ">=0.6.0",
