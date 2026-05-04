@@ -61,6 +61,21 @@
       "prompts/rules.md",
       "prompts/examples.md"
     ],
+    "nodeTypes": [
+      {
+        "type_id": "http",
+        "label": "HTTP Request",
+        "category": "integration",
+        "icon": "🌐",
+        "color": "#7c3aed",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"url\",\"method\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"Request URL\"},\"method\":{\"type\":\"string\",\"enum\":[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\"]},\"headers\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"body_mapping\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}}",
+        "output_ports": [
+          { "name": "success", "label": "Success" },
+          { "name": "error", "label": "Error" }
+        ]
+      }
+    ],
     "tools": [
       {
         "name": "generate_http_node",
