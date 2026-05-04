@@ -21,11 +21,11 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Verify publisher prefix
-        run: bash ci/check_publisher_prefix.sh greentic greentic.platform-bootstrap
-        env:
-          GREENTIC_STORE_URL: ${{ vars.GREENTIC_STORE_URL }}
-          GREENTIC_STORE_TOKEN: ${{ secrets.GREENTIC_STORE_TOKEN }}
+      # Pre-flight publisher prefix check intentionally omitted — the
+      # store API stopped returning `allowed_prefixes` on the publisher
+      # endpoint, breaking ci/check_publisher_prefix.sh. The
+      # designer-extension-action handles auth + prefix enforcement
+      # store-side anyway.
       - name: Publish via designer-extension-action
         uses: greenticai/greentic-designer-extension-action@v1
         with:
