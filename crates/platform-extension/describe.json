@@ -1,0 +1,124 @@
+{
+  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
+  "apiVersion": "greentic.ai/v1",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.platform-bootstrap",
+    "name": "Greentic Platform Primitives",
+    "version": "0.1.0",
+    "summary": "Canonical node-type descriptors for editor primitives the platform itself owns",
+    "description": "Ships node-type descriptors for start (every flow has one), trigger (generic webhook entry), and llm (generic AI step). Other extensions are expected to specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes — but until that happens the editor falls back to these generics so the catalog is never empty. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "platform",
+      "bootstrap",
+      "node-types",
+      "design-extension"
+    ]
+  },
+  "engine": {
+    "greenticDesigner": ">=0.6.0",
+    "extRuntime": "^0.1.0"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:platform/bootstrap-nodes",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "component": "extension.wasm",
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    }
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "start",
+        "label": "Start",
+        "category": "trigger",
+        "icon": "🚩",
+        "color": "#475569",
+        "complexity": "simple",
+        "config_schema": null,
+        "output_ports": [
+          { "name": "default", "label": "Next" }
+        ]
+      },
+      {
+        "type_id": "trigger",
+        "label": "Webhook Trigger",
+        "category": "trigger",
+        "icon": "⚡",
+        "color": "#16a34a",
+        "complexity": "simple",
+        "config_schema": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "DELETE"],
+              "default": "POST"
+            },
+            "path": {
+              "type": "string",
+              "description": "Request path",
+              "default": "/api/incoming"
+            },
+            "auth": {
+              "type": "boolean",
+              "description": "Require auth",
+              "default": false
+            }
+          }
+        },
+        "output_ports": [
+          { "name": "default", "label": "Next" }
+        ]
+      },
+      {
+        "type_id": "llm",
+        "label": "LLM",
+        "category": "ai",
+        "icon": "🧠",
+        "color": "#a855f7",
+        "complexity": "complex",
+        "config_schema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "description": "Model id",
+              "default": "claude-haiku-4-5"
+            },
+            "system": {
+              "type": "string",
+              "description": "System prompt",
+              "format": "textarea"
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Sampling temperature",
+              "default": 0.3
+            }
+          }
+        },
+        "output_ports": [
+          { "name": "default", "label": "Next" }
+        ]
+      }
+    ]
+  }
+}

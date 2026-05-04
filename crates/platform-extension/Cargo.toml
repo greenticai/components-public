@@ -1,0 +1,26 @@
+[package]
+name = "platform-extension"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Greentic"]
+description = "Greentic platform-bootstrap design extension. Ships canonical node-type descriptors for the editor primitives (start, trigger, llm) that aren't owned by any other extension yet."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wit-bindgen-rt = { version = "0.35", features = ["bitflags"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[package.metadata.component]
+package = "greentic:platform"
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"greentic:extension-base" = { path = "wit/deps/greentic/extension-base" }
+"greentic:extension-host" = { path = "wit/deps/greentic/extension-host" }
+"greentic:extension-design" = { path = "wit/deps/greentic/extension-design" }
