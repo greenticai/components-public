@@ -5,7 +5,7 @@
   "metadata": {
     "id": "greentic.http",
     "name": "HTTP Client",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "summary": "Generate and validate HTTP call nodes for Greentic flows",
     "description": "Teaches the Designer LLM to generate YGTc HTTP nodes from natural language, curl commands, or card submit contexts. Wraps component-http runtime \u2014 does not make HTTP calls itself.",
     "author": {
