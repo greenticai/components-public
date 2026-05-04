@@ -1,9 +1,9 @@
 name: Publish Platform Extension
 
-# Publishes the greentic.platform-bootstrap design extension (.gtxpack)
-# to the Greentic Store on `platform-ext-v*` tag pushes. Tag pattern is
-# distinct from `ext-v*` (which the http extension uses) so each
-# extension in this repo can be released independently.
+# Publishes greentic.platform-bootstrap (.gtxpack) on `platform-ext-v*`
+# tag pushes. Tag pattern is distinct from `ext-v*` (http) so each
+# extension in the repo can ship independently. Version published =
+# tag name with the leading `platform-ext-v` stripped.
 
 on:
   push:
@@ -21,16 +21,21 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      # Pre-flight publisher prefix check intentionally omitted — the
-      # store API stopped returning `allowed_prefixes` on the publisher
-      # endpoint, breaking ci/check_publisher_prefix.sh. The
-      # designer-extension-action handles auth + prefix enforcement
-      # store-side anyway.
-      - name: Publish via designer-extension-action
-        uses: greenticai/greentic-designer-extension-action@v2
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#platform-ext-v}"
+          fi
+          echo "==> Publishing greentic.platform-bootstrap@${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - uses: greenticai/greentic-designer-extension-action@v2
         with:
-          extension-dir: crates/platform-extension
-          version-from-tag: ${{ github.event_name == 'push' }}
-        env:
-          GREENTIC_STORE_URL: ${{ vars.GREENTIC_STORE_URL }}
-          GREENTIC_STORE_TOKEN: ${{ secrets.GREENTIC_STORE_TOKEN }}
+          manifest: crates/platform-extension/Cargo.toml
+          store-url: ${{ vars.GREENTIC_STORE_URL }}
+          store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}
+          version: ${{ steps.ver.outputs.version }}
