@@ -24,7 +24,7 @@ jobs:
       # braces. Restore it once the store API exposes allowed_prefixes
       # again (or replace with a different sanity probe).
       - name: Publish via designer-extension-action
-        uses: greenticai/greentic-designer-extension-action@v1
+        uses: greenticai/greentic-designer-extension-action@v2
         with:
           extension-dir: crates/http-extension
           version-from-tag: ${{ github.event_name == 'push' }}

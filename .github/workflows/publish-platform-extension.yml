@@ -27,7 +27,7 @@ jobs:
       # designer-extension-action handles auth + prefix enforcement
       # store-side anyway.
       - name: Publish via designer-extension-action
-        uses: greenticai/greentic-designer-extension-action@v1
+        uses: greenticai/greentic-designer-extension-action@v2
         with:
           extension-dir: crates/platform-extension
           version-from-tag: ${{ github.event_name == 'push' }}
