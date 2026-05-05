@@ -5,7 +5,7 @@
   "metadata": {
     "id": "greentic.http",
     "name": "HTTP Client",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "summary": "Generate and validate HTTP call nodes for Greentic flows",
     "description": "Teaches the Designer LLM to generate YGTc HTTP nodes from natural language, curl commands, or card submit contexts. Wraps component-http runtime \u2014 does not make HTTP calls itself.",
     "author": {
@@ -69,7 +69,28 @@
         "icon": "🌐",
         "color": "#7c3aed",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\",\"required\":[\"url\",\"method\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"Request URL\"},\"method\":{\"type\":\"string\",\"enum\":[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\"]},\"headers\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"body_mapping\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}}",
+        "config_schema": {
+          "type": "object",
+          "required": ["url", "method"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Request URL"
+            },
+            "method": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "body_mapping": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        },
         "output_ports": [
           { "name": "success", "label": "Success" },
           { "name": "error", "label": "Error" }
