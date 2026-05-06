@@ -5,7 +5,7 @@
   "metadata": {
     "id": "greentic.llm-generic",
     "name": "LLM (generic)",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "summary": "Generic LLM step node for Greentic flows",
     "description": "Ships the canonical generic `llm` nodeType — a fallback for prompt-driven AI steps that aren't pinned to a specific provider. Provider-specific extensions (greentic.llm-openai and friends) ship richer nodeTypes that implement the actual completion call; this generic node is a placeholder the planner can target when the provider is unknown or pluggable. Pure metadata extension: no WASM logic, only the descriptor + JSON Schema the designer needs to render the inspector form.",
     "author": {
@@ -69,10 +69,7 @@
             },
             "temperature": {
               "type": "number",
-              "description": "Sampling temperature (0.0 = deterministic, 1.0 = maximum diversity)",
-              "default": 0.3,
-              "minimum": 0.0,
-              "maximum": 2.0
+              "description": "Sampling temperature. 0 is deterministic, higher values increase diversity. Common range 0–2 depending on the provider; check your model's docs for valid bounds. Leave unset to use the provider default."
             },
             "max_tokens": {
               "type": "integer",
