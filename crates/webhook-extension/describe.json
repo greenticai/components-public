@@ -5,9 +5,9 @@
   "metadata": {
     "id": "greentic.webhook",
     "name": "Webhook Trigger",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "summary": "Generic inbound HTTP webhook trigger for Greentic flows",
-    "description": "Ships the canonical webhook trigger nodeType. Webhook is operator-side ingress — the runtime exposes an HTTP listener, validates auth, and kicks off flow execution when a request matches the configured path. This extension carries no WASM logic, only the descriptor + config schema the designer needs to render the inspector form.",
+    "description": "Ships the canonical webhook trigger nodeType plus three design-time tools (validate_webhook_config, suggest_path, infer_auth_from_curl). Webhook is operator-side ingress — the runtime exposes an HTTP listener, validates auth, and kicks off flow execution when a request matches the configured path. The tools help the designer LLM produce a valid trigger config from natural-language intent or a sample curl an upstream system would send.",
     "author": {
       "name": "Greentic",
       "email": "team@greentic.ai"
@@ -30,6 +30,18 @@
     "offered": [
       {
         "id": "greentic:webhook/trigger-spec",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:webhook/validate",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:webhook/path-suggester",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:webhook/curl-import",
         "version": "1.0.0"
       }
     ],
@@ -115,6 +127,19 @@
         ]
       }
     ],
-    "tools": []
+    "tools": [
+      {
+        "name": "validate_webhook_config",
+        "export": "greentic:extension-design/tools.invoke-tool"
+      },
+      {
+        "name": "suggest_path",
+        "export": "greentic:extension-design/tools.invoke-tool"
+      },
+      {
+        "name": "infer_auth_from_curl",
+        "export": "greentic:extension-design/tools.invoke-tool"
+      }
+    ]
   }
 }
