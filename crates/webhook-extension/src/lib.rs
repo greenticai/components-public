@@ -3,18 +3,22 @@
 //! Carries the canonical `webhook trigger` nodeType. Webhook is
 //! operator-side ingress — the runtime exposes an HTTP listener,
 //! validates auth, and kicks off flow execution when a request
-//! matches the configured path. This extension carries no WASM
-//! logic; it only ships the descriptor + JSON Schema the designer
-//! needs to render the inspector form.
+//! matches the configured path. This extension ships:
 //!
-//! The WASM exports below are no-op stubs that satisfy the
-//! design-extension WIT contract. Design-time tools
-//! (validate_webhook_config, suggest_path, infer_auth_from_curl)
-//! are deferred to a follow-up release once the runtime split
-//! has settled.
+//! - the trigger nodeType + JSON Schema (rendered by the designer
+//!   inspector); and
+//! - three design-time tools the designer LLM can call:
+//!     * `validate_webhook_config`
+//!     * `suggest_path`
+//!     * `infer_auth_from_curl`
+//!
+//! The WASM exports for prompting / validation / knowledge remain
+//! no-op stubs — the extension does not contribute prompt fragments,
+//! a knowledge base, or content-type validators yet.
 
 #[allow(warnings)]
 mod bindings;
+mod tools;
 
 use bindings::exports::greentic::extension_base::{lifecycle, manifest};
 use bindings::exports::greentic::extension_design::{
@@ -55,16 +59,22 @@ impl lifecycle::Guest for Component {
     fn shutdown() {}
 }
 
-// ---- extension-design/tools — no tools shipped (yet) ----
+// ---- extension-design/tools ----
 impl wit_tools::Guest for Component {
     fn list_tools() -> Vec<wit_tools::ToolDefinition> {
-        Vec::new()
+        crate::tools::list_tools()
+            .into_iter()
+            .map(|t| wit_tools::ToolDefinition {
+                name: t.name,
+                description: t.description,
+                input_schema_json: t.input_schema_json,
+                output_schema_json: t.output_schema_json,
+            })
+            .collect()
     }
 
-    fn invoke_tool(name: String, _args_json: String) -> Result<String, types::ExtensionError> {
-        Err(types::ExtensionError::InvalidInput(format!(
-            "greentic.webhook exposes no tools yet (got '{name}')"
-        )))
+    fn invoke_tool(name: String, args_json: String) -> Result<String, types::ExtensionError> {
+        crate::tools::invoke_tool(&name, &args_json).map_err(types::ExtensionError::InvalidInput)
     }
 }
 
