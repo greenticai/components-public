@@ -5,9 +5,9 @@
   "metadata": {
     "id": "greentic.platform-bootstrap",
     "name": "Greentic Platform Primitives",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "summary": "Canonical node-type descriptors for editor primitives the platform itself owns",
-    "description": "Ships node-type descriptors for start (every flow has one) and llm (generic AI step). The webhook trigger nodeType lives in `greentic.webhook` since 0.2.0 — see the webhook-extension split design doc. Other extensions specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes — but until that happens the editor falls back to these generics so the catalog is never empty. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
+    "description": "Ships the start nodeType — the only structural primitive the platform itself owns. Webhook trigger moved to `greentic.webhook` in 0.2.0; the generic LLM nodeType moved to `greentic.llm-generic` in 0.3.0. Other extensions specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes (greentic.llm-openai, …) — but the editor always has a baseline. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
     "author": {
       "name": "Greentic",
       "email": "team@greentic.ai"
@@ -53,37 +53,6 @@
         "color": "#475569",
         "complexity": "simple",
         "config_schema": null,
-        "output_ports": [
-          { "name": "default", "label": "Next" }
-        ]
-      },
-      {
-        "type_id": "llm",
-        "label": "LLM",
-        "category": "ai",
-        "icon": "🧠",
-        "color": "#a855f7",
-        "complexity": "complex",
-        "config_schema": {
-          "type": "object",
-          "properties": {
-            "model": {
-              "type": "string",
-              "description": "Model id",
-              "default": "claude-haiku-4-5"
-            },
-            "system": {
-              "type": "string",
-              "description": "System prompt",
-              "format": "textarea"
-            },
-            "temperature": {
-              "type": "number",
-              "description": "Sampling temperature",
-              "default": 0.3
-            }
-          }
-        },
         "output_ports": [
           { "name": "default", "label": "Next" }
         ]

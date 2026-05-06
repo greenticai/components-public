@@ -1,0 +1,11 @@
+{
+  "extension.name": "LLM (generic)",
+  "extension.description": "Generic LLM step node for Greentic flows.",
+  "extension.summary": "Provider-agnostic AI step. Provider-specific extensions ship richer variants.",
+  "node.llm.label": "LLM",
+  "node.llm.description": "Run a prompt against a model and pass the response downstream.",
+  "node.llm.config.model": "Model ID",
+  "node.llm.config.system": "System prompt",
+  "node.llm.config.temperature": "Temperature",
+  "node.llm.config.max_tokens": "Max tokens"
+}

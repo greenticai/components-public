@@ -1,0 +1,92 @@
+{
+  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
+  "apiVersion": "greentic.ai/v1",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.llm-generic",
+    "name": "LLM (generic)",
+    "version": "0.1.0",
+    "summary": "Generic LLM step node for Greentic flows",
+    "description": "Ships the canonical generic `llm` nodeType — a fallback for prompt-driven AI steps that aren't pinned to a specific provider. Provider-specific extensions (greentic.llm-openai and friends) ship richer nodeTypes that implement the actual completion call; this generic node is a placeholder the planner can target when the provider is unknown or pluggable. Pure metadata extension: no WASM logic, only the descriptor + JSON Schema the designer needs to render the inspector form.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "llm",
+      "ai",
+      "generic",
+      "design-extension"
+    ]
+  },
+  "engine": {
+    "greenticDesigner": ">=0.6.0",
+    "extRuntime": "^0.1.0"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:llm/generic-step",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "component": "extension.wasm",
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    }
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "llm",
+        "label": "LLM",
+        "category": "ai",
+        "icon": "brain",
+        "color": "#a855f7",
+        "complexity": "complex",
+        "config_schema": {
+          "type": "object",
+          "required": ["model"],
+          "properties": {
+            "model": {
+              "type": "string",
+              "description": "Model id (e.g. claude-haiku-4-5, gpt-4o, llama3:8b)",
+              "default": "claude-haiku-4-5",
+              "examples": ["claude-haiku-4-5", "gpt-4o", "gpt-4o-mini", "llama3:8b"]
+            },
+            "system": {
+              "type": "string",
+              "description": "System prompt",
+              "format": "textarea"
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Sampling temperature (0.0 = deterministic, 1.0 = maximum diversity)",
+              "default": 0.3,
+              "minimum": 0.0,
+              "maximum": 2.0
+            },
+            "max_tokens": {
+              "type": "integer",
+              "description": "Maximum number of tokens to generate",
+              "minimum": 1
+            }
+          }
+        },
+        "output_ports": [
+          { "name": "default", "label": "Next" },
+          { "name": "error", "label": "Error" }
+        ]
+      }
+    ],
+    "tools": []
+  }
+}
