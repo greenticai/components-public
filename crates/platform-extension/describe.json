@@ -5,9 +5,9 @@
   "metadata": {
     "id": "greentic.platform-bootstrap",
     "name": "Greentic Platform Primitives",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "summary": "Canonical node-type descriptors for editor primitives the platform itself owns",
-    "description": "Ships node-type descriptors for start (every flow has one), trigger (generic webhook entry), and llm (generic AI step). Other extensions are expected to specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes — but until that happens the editor falls back to these generics so the catalog is never empty. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
+    "description": "Ships node-type descriptors for start (every flow has one) and llm (generic AI step). The webhook trigger nodeType lives in `greentic.webhook` since 0.2.0 — see the webhook-extension split design doc. Other extensions specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes — but until that happens the editor falls back to these generics so the catalog is never empty. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
     "author": {
       "name": "Greentic",
       "email": "team@greentic.ai"
@@ -53,37 +53,6 @@
         "color": "#475569",
         "complexity": "simple",
         "config_schema": null,
-        "output_ports": [
-          { "name": "default", "label": "Next" }
-        ]
-      },
-      {
-        "type_id": "trigger",
-        "label": "Webhook Trigger",
-        "category": "trigger",
-        "icon": "⚡",
-        "color": "#16a34a",
-        "complexity": "simple",
-        "config_schema": {
-          "type": "object",
-          "properties": {
-            "method": {
-              "type": "string",
-              "enum": ["GET", "POST", "PUT", "DELETE"],
-              "default": "POST"
-            },
-            "path": {
-              "type": "string",
-              "description": "Request path",
-              "default": "/api/incoming"
-            },
-            "auth": {
-              "type": "boolean",
-              "description": "Require auth",
-              "default": false
-            }
-          }
-        },
         "output_ports": [
           { "name": "default", "label": "Next" }
         ]

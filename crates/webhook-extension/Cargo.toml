@@ -1,21 +1,18 @@
 [package]
-name = "platform-extension"
-version = "0.2.0"
+name = "webhook-extension"
+version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Greentic"]
-description = "Greentic platform-bootstrap design extension. Ships canonical node-type descriptors for the editor primitives (start, llm) that aren't owned by any other extension yet. The webhook trigger has moved to greentic.webhook since 0.2.0."
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wit-bindgen-rt = { version = "0.35", features = ["bitflags"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 
 [package.metadata.component]
-package = "greentic:platform"
+package = "greentic:webhook"
 
 [package.metadata.component.target]
 path = "wit"
