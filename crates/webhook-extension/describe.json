@@ -1,0 +1,120 @@
+{
+  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
+  "apiVersion": "greentic.ai/v1",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.webhook",
+    "name": "Webhook Trigger",
+    "version": "0.1.0",
+    "summary": "Generic inbound HTTP webhook trigger for Greentic flows",
+    "description": "Ships the canonical webhook trigger nodeType. Webhook is operator-side ingress — the runtime exposes an HTTP listener, validates auth, and kicks off flow execution when a request matches the configured path. This extension carries no WASM logic, only the descriptor + config schema the designer needs to render the inspector form.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "webhook",
+      "trigger",
+      "ingress",
+      "http",
+      "design-extension"
+    ]
+  },
+  "engine": {
+    "greenticDesigner": ">=0.6.0",
+    "extRuntime": "^0.1.0"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:webhook/trigger-spec",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "component": "extension.wasm",
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    }
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "trigger",
+        "label": "Webhook Trigger",
+        "category": "trigger",
+        "icon": "webhook",
+        "color": "#0ea5e9",
+        "complexity": "simple",
+        "config_schema": {
+          "type": "object",
+          "required": ["method", "path"],
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "PATCH"],
+              "default": "POST",
+              "description": "HTTP method the webhook accepts"
+            },
+            "path": {
+              "type": "string",
+              "description": "URL path the runtime listens on (e.g. /webhook/orders)",
+              "examples": ["/webhook/orders", "/hooks/slack-event", "/api/intake"]
+            },
+            "auth": {
+              "type": "object",
+              "description": "Authentication policy applied to incoming requests",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["none", "bearer", "hmac", "basic"],
+                  "default": "none"
+                },
+                "secret_ref": {
+                  "type": "string",
+                  "description": "Secret name holding the auth credential (for bearer / hmac / basic)"
+                }
+              }
+            },
+            "signature_validation": {
+              "type": "object",
+              "description": "Optional HMAC signature check applied to the request body",
+              "properties": {
+                "header": {
+                  "type": "string",
+                  "examples": ["X-Hub-Signature-256", "X-Slack-Signature"]
+                },
+                "algorithm": {
+                  "type": "string",
+                  "enum": ["hmac-sha256", "hmac-sha1"],
+                  "default": "hmac-sha256"
+                },
+                "secret_ref": {
+                  "type": "string",
+                  "description": "Secret name holding the signing key"
+                }
+              }
+            },
+            "allowed_sources": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Optional CIDR allowlist for the request's source IP (e.g. \"203.0.113.0/24\")"
+            }
+          }
+        },
+        "output_ports": [
+          { "name": "default", "label": "Triggered" },
+          { "name": "rejected", "label": "Auth failed" }
+        ]
+      }
+    ],
+    "tools": []
+  }
+}

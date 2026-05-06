@@ -1,0 +1,12 @@
+{
+  "extension.name": "Webhook Trigger",
+  "extension.description": "Generic inbound HTTP webhook trigger for Greentic flows.",
+  "extension.summary": "Operator-side ingress: HTTP listener, auth validation, fires flow execution on match.",
+  "node.trigger.label": "Webhook Trigger",
+  "node.trigger.description": "Listen on an HTTP path and start the flow when a request arrives.",
+  "node.trigger.config.method": "HTTP method",
+  "node.trigger.config.path": "URL path",
+  "node.trigger.config.auth": "Authentication",
+  "node.trigger.config.signature_validation": "Signature validation",
+  "node.trigger.config.allowed_sources": "Allowed source IPs (CIDR)"
+}
