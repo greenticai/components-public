@@ -1,0 +1,42 @@
+name: Publish Webhook Extension
+
+# Publishes greentic.webhook (.gtxpack) on `webhook-ext-v*` tag pushes.
+# Tag pattern is distinct from `ext-v*` (http) and `platform-ext-v*`
+# (platform-bootstrap) so each extension in the repo can ship
+# independently. Version published = tag name with the leading
+# `webhook-ext-v` stripped.
+
+on:
+  push:
+    tags: ['webhook-ext-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Extension version to publish (must match describe.json)'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#webhook-ext-v}"
+          fi
+          echo "==> Publishing greentic.webhook@${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - uses: greenticai/greentic-designer-extension-action@v2
+        with:
+          manifest: crates/webhook-extension/Cargo.toml
+          store-url: ${{ vars.GREENTIC_STORE_URL }}
+          store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}
+          version: ${{ steps.ver.outputs.version }}

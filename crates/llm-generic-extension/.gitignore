@@ -1,0 +1,4 @@
+/target
+/dist
+*.gtxpack
+.DS_Store

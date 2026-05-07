@@ -1,0 +1,25 @@
+[package]
+name = "webhook-extension"
+version = "0.2.0"
+edition = "2024"
+license = "MIT"
+authors = ["Greentic"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wit-bindgen-rt = { version = "0.35", features = ["bitflags"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[package.metadata.component]
+package = "greentic:webhook"
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"greentic:extension-base" = { path = "wit/deps/greentic/extension-base" }
+"greentic:extension-host" = { path = "wit/deps/greentic/extension-host" }
+"greentic:extension-design" = { path = "wit/deps/greentic/extension-design" }
