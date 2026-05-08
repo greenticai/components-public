@@ -5,7 +5,7 @@
   "metadata": {
     "id": "greentic.platform-bootstrap",
     "name": "Greentic Platform Primitives",
-    "version": "0.3.0",
+    "version": "1.2.0",
     "summary": "Canonical node-type descriptors for editor primitives the platform itself owns",
     "description": "Ships the start nodeType — the only structural primitive the platform itself owns. Webhook trigger moved to `greentic.webhook` in 0.2.0; the generic LLM nodeType moved to `greentic.llm-generic` in 0.3.0. Other extensions specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes (greentic.llm-openai, …) — but the editor always has a baseline. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
     "author": {
