@@ -11,14 +11,14 @@ VERSION="$(jq -r .metadata.version "$DIR/describe.json")"
 echo "==> Building llm-generic-extension v${VERSION} (wasm32-wasip2)..."
 
 cd "$WORKSPACE_ROOT"
-cargo component build --release --package llm-generic-extension
+cargo component build --release --target wasm32-wasip2 --package llm-generic-extension
 
-# cargo-component writes to wasm32-wasip1 target triple even when the WIT world is wasip2
+# cargo-component writes to wasm32-wasip2 target triple even when the WIT world is wasip2
 WASM_SRC=""
 for candidate in \
-    "$WORKSPACE_ROOT/target/wasm32-wasip1/release/llm_generic_extension.wasm" \
     "$WORKSPACE_ROOT/target/wasm32-wasip2/release/llm_generic_extension.wasm" \
-    "$DIR/target/wasm32-wasip1/release/llm_generic_extension.wasm" \
+    "$WORKSPACE_ROOT/target/wasm32-wasip2/release/llm_generic_extension.wasm" \
+    "$DIR/target/wasm32-wasip2/release/llm_generic_extension.wasm" \
     "$DIR/target/wasm32-wasip2/release/llm_generic_extension.wasm"; do
     if [ -f "$candidate" ]; then
         WASM_SRC="$candidate"
