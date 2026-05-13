@@ -63,13 +63,15 @@ User expectation per existing extension policy (memory `project_extension_versio
 
 ## Approach
 
-Single-track end-to-end execution: forward-port `origin/develop` into `origin/main`, branch `research` from the unified base, land Cargo + workflow changes on a feature branch off `research`, tag, publish, validate. No parallel rebasing.
+Single-track end-to-end execution: **forward-port `origin/main` into `origin/develop`** (matches existing repo pattern, preserves main as stable), branch `research` from unified `develop`, land Cargo + workflow changes on a feature branch off `research`, tag, publish, validate. No parallel rebasing.
+
+> **Direction note (revised 2026-05-13, post-Task-2 investigation):** Initial spec called for promote `develop → main` to "sync 1.1.0-dev.0 lane upward". Discovered during execution that `main` carries 2 commits (`ef34024`, `6479956`) bumping 4 extensions to research-tier `1.2.0` that were never synced to develop, while develop's `1.1.0-dev.0` workspace force-jump was never synced to main. Both lanes carry legitimate parallel innovation. Reversing the direction to forward-port (`main → develop`) preserves main's stable role (`workspace = 0.1.0`, ext at per-crate `1.2.0`), matches the existing `forward-port/main-to-develop-*` PR pattern in this repo, and yields `develop` as the unified most-current baseline — which is the natural place to branch `research` from per three-tier promote direction (research → develop → main).
 
 ### Sequence (strictly sequential)
 
 ```
-Step 1.  Promote origin/develop → origin/main                  [INFRA, maintainer review]
-Step 2.  Bootstrap research branch from unified main           [INFRA, lightweight]
+Step 1.  Forward-port origin/main → origin/develop             [INFRA, maintainer review]
+Step 2.  Bootstrap research branch from unified develop        [INFRA, lightweight]
 Step 3.  On research:
            3a. crates/component-http/Cargo.toml:
                  version.workspace = true → version = "1.2.0"
@@ -85,39 +87,41 @@ Promotion direction post-SP-1 (reference, not action):
 research (innovation, lands first)  →  develop (staging)  →  main (stable)
 ```
 
+Forward-port direction in Step 1 is the *one-time bootstrap inverse* of this flow — sync the historical research-tier work already on `main` down into `develop` so that `research` (created in Step 2) starts from a unified base. After SP-1, normal promotion direction takes over.
+
 ## Step-by-step details
 
-### Step 1 — Promote `origin/develop` → `origin/main`
+### Step 1 — Forward-port `origin/main` → `origin/develop`
 
-`components-public` recent activity uses `forward-port/main-to-develop-YYYYMMDD` branches (main → develop direction, periodic sync). What we need is **the opposite direction**: bring develop's `1.1.0-dev.0` content into main so both lanes are aligned before research branches off. Phrase the PR title and body as **promote**, not forward-port, to avoid confusion.
+`components-public` already uses `forward-port/main-to-develop-YYYYMMDD` branches periodically. This step is a fresh forward-port that brings main's research-tier ext-v1.2.0 commits into develop, producing a unified baseline for `research` to branch from in Step 2.
 
 ```bash
 cd components-public
 git fetch --all
-git checkout -b promote/develop-to-main-$(date +%Y%m%d) origin/main
-git merge origin/develop                # resolve conflicts inline
+git checkout -b forward-port/main-to-develop-$(date +%Y%m%d) origin/develop
+git merge origin/main                    # resolve conflicts inline
 git push origin HEAD
-gh pr create --base main \
-  --head promote/develop-to-main-$(date +%Y%m%d) \
-  --title "promote: develop → main (1.1.0-dev.0 lane → stable)" \
-  --body "Sync develop into main before bootstrapping research branch for three-tier branching pilot. Refs: project_three_tier_branching, project_research_promote_cadence."
+gh pr create --base develop \
+  --head forward-port/main-to-develop-$(date +%Y%m%d) \
+  --title "forward-port: main → develop (sync research-tier ext bumps)" \
+  --body "Sync main into develop before bootstrapping research branch for three-tier branching pilot. Forward-ports the 1.2.0 ext-tier work on main into develop's 1.1.0-dev.0 baseline. Refs: project_three_tier_branching, project_research_promote_cadence."
 ```
 
-**Conflict expectations.** Cargo.lock is the most likely conflict source (dev-lane stamping differs). Source-level conflicts should be minimal because `forward-port/main-to-develop-*` PRs already keep develop fed from main; the inverse direction should mostly be the dev-lane workspace version bump `c08cc5e chore: force-jump dev lane to 1.1.0-dev.0 (#322)` and follow-on cargo updates.
+**Conflict expectations.** Cargo.lock + per-crate Cargo.toml for `http-extension`, `platform-extension`, `llm-generic-extension`, `webhook-extension`. Each will carry the same disagreement: main shows `version = "1.2.0"` (research-tier release), develop shows `version = "1.1.0-dev.0"` (force-jump). Resolution: take **main's `1.2.0`** on each extension Cargo.toml conflict (preserves the published release semantics). Keep develop's `workspace.package.version = "1.1.0-dev.0"` on the root `Cargo.toml`. For Cargo.lock: take main's version (with `--theirs` from the merge POV) then `cargo update --workspace` to reconcile. Net effect: develop ends up with `workspace = 1.1.0-dev.0` + per-crate ext `1.2.0`, which is exactly the parallel-version model SP-1's component-http change extends to a new crate.
 
-**Done criteria.** `main` HEAD equals (or is fast-forward of) `develop` HEAD post-merge; CI green; maintainer approves.
+**Done criteria (revised D1).** `develop` HEAD contains both `origin/main`'s history and develop's prior commits; CI green on the PR; maintainer approves the merge.
 
 ### Step 2 — Bootstrap `research` branch
 
 ```bash
 git fetch origin
-git checkout -b research origin/main
+git checkout -b research origin/develop
 git push -u origin research
 ```
 
 Optional follow-up out-of-scope for SP-1: update repo settings so `research` is the default base for new feature PRs (devops policy decision).
 
-**Done criteria.** `origin/research` exists, points at the same commit as `origin/main` immediately after Step 1.
+**Done criteria (revised D2).** `origin/research` exists, points at the same commit as `origin/develop` immediately after the Step 1 forward-port PR merged.
 
 ### Step 3 — Code changes on research
 
@@ -334,10 +338,10 @@ OCI tags are treated as immutable (OCI norm). If `:1.2.0` proves broken after pu
 
 - **Forward-only.** Push a patch tag `component-http-v1.2.1` with the fix. Consumers re-pin. Do not delete `:1.2.0`.
 
-If Step 1 promote-to-main destabilises main:
+If Step 1 forward-port destabilises develop:
 
-- Revert via `gh pr create --base main --head revert/promote-develop-to-main-X`.
-- `research` remains valid, rebased onto the new `main` HEAD.
+- Revert via `gh pr create --base develop --head revert/forward-port-main-to-develop-X`.
+- If `research` has already been branched off the post-forward-port commit, rebase it onto the reverted develop HEAD.
 
 If the new `publish-component-http.yml` workflow itself misbehaves post-merge:
 
@@ -347,8 +351,8 @@ If the new `publish-component-http.yml` workflow itself misbehaves post-merge:
 
 | # | Check | Verification |
 |---|---|---|
-| D1 | `main` HEAD equals post-promote SHA | `git ls-remote origin main` |
-| D2 | `research` branch exists at origin | `git ls-remote origin research` |
+| D1 | `develop` HEAD contains main's history post forward-port | `git merge-base --is-ancestor origin/main origin/develop && echo OK` |
+| D2 | `research` branch exists at origin, equals `develop` HEAD at branch time | `git ls-remote origin research` and `git ls-remote origin develop` agree |
 | D3 | `crates/component-http/Cargo.toml` has `version = "1.2.0"` on `research` | file diff |
 | D4 | `.github/workflows/publish-component-http.yml` exists on `research` | file presence |
 | D5 | Tag `component-http-v1.2.0` pushed | `git ls-remote origin --tags \| grep component-http-v1.2.0` |
@@ -378,7 +382,7 @@ All nine must pass. When they do, SP-2 and SP-3 may begin.
 - `project_three_tier_branching` — pilot in `greentic-bundle`, propagating to tier-3+ repos. SP-1 includes the bootstrap for `components-public`.
 - `project_research_promote_cadence` — 2-weekly promote cadence applies post-SP-1.
 - `feedback_pr_target_research_directly` — once `research` exists, future feat PRs target it.
-- `feedback_devops_team_owns_infra` — Step 1 (promote) flagged for maintainer review.
+- `feedback_devops_team_owns_infra` — Step 1 (forward-port) flagged for maintainer review.
 - `feedback_runner_host_naming` — clarifies that the user's hunch ("bundle-extensions vs runner/flow") referred semantically to component-WIT version skew, even though the named `greentic-bundle-extensions` repo is not on the data path.
 - `feedback_no_invented_names_in_public` — every commit SHA, version, file path in this spec is verified against the current workspace, not assumed.
 - `project_oci_stable_migration` — `:latest → :stable` migration is the SP-4 follow-up; this spec sticks with explicit `:1.2.0`.

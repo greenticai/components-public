@@ -4,7 +4,7 @@
 
 **Goal:** Publish `component-http` to `ghcr.io/greenticai/component/component-http:1.2.0` built from current source (which exports `greentic:component@0.6.0`), and bootstrap three-tier branching (`main` → `develop` → `research`) in `components-public` as a one-time prerequisite.
 
-**Architecture:** Single-track execution. Forward-port `origin/develop` into `origin/main` (gated by maintainer review), branch `research` from the unified base, land Cargo + workflow + verification-script changes on a feature branch off `research`, tag, publish, validate. No rebasing or parallel paths.
+**Architecture:** Single-track execution. **Forward-port `origin/main` into `origin/develop`** (matches existing repo pattern, preserves main as stable lane; revised from initial plan after discovering main carried research-tier ext-v1.2.0 commits never synced to develop). Branch `research` from unified develop, land Cargo + workflow + verification-script changes on a feature branch off `research`, tag, publish, validate. No rebasing or parallel paths.
 
 **Tech Stack:** Rust 1.94 / Cargo workspace, `cargo-component` for WASM build, `wasm32-wasip2` target, `oras` for OCI push, GitHub Actions (reusable workflow `greenticai/.github/.github/workflows/wasm-component-ci.yml@main` or hand-rolled fallback), `wasm-tools` for artifact inspection.
 
@@ -123,46 +123,54 @@ This drives Task 7's YAML shape.
 
 No git commit here — Task 1 produces no repo changes, only a `/tmp/` note used by Task 7.
 
-### Task 2: Promote `origin/develop` → `origin/main`
+### Task 2: Forward-port `origin/main` → `origin/develop`
+
+> **Direction note:** Initial plan called for the inverse (`develop → main`). Switched to forward-port direction after discovering `main` carries 2 commits (`ef34024`, `6479956`) bumping 4 extensions to research-tier `1.2.0` that were never synced to develop. Forward-port matches the existing `forward-port/main-to-develop-*` PR pattern in this repo and preserves main's role as stable lane.
 
 **Files:**
-- Modified: any file diverging between `develop` and `main` (resolved during merge)
-- Likely conflicts: `Cargo.lock`, `Cargo.toml` (workspace version), nightly dependabot bumps
+- Modified: any file diverging between `main` and `develop` (resolved during merge)
+- Likely conflicts: `Cargo.lock`, `crates/http-extension/Cargo.toml`, `crates/platform-extension/Cargo.toml`, possibly `crates/llm-generic-extension/Cargo.toml` and `crates/webhook-extension/Cargo.toml`
 
 - [ ] **Step 1: Inspect divergence before merging**
 
 ```bash
 cd "$(cat /tmp/sp1-worktree-path)"
-echo "=== develop ahead of main ==="
-git log --oneline origin/main..origin/develop
-echo "=== main ahead of develop ==="
+echo "=== main ahead of develop (will be forward-ported) ==="
 git log --oneline origin/develop..origin/main
+echo "=== develop ahead of main (will not move) ==="
+git log --oneline origin/main..origin/develop
 ```
 
-Expected: develop ahead-list has commits including `62f6b29 chore: force-jump dev lane to 1.1.0-dev.0 (#32)`; main ahead-list may be empty or carry recent extension tags.
+Expected: main ahead-list contains `ef34024 chore(http-extension): research-tier 1.2.0 + finish wasip2 alignment` and `6479956 chore(extensions): research-tier 1.2.0 + wasip2 across 3 extensions`. Develop ahead-list contains forward-port merges and dev-lane stamping.
 
 Record commits to a note for the PR body:
 
 ```bash
-git log --oneline origin/main..origin/develop > /tmp/sp1-promote-commits.txt
+git log --oneline origin/develop..origin/main > /tmp/sp1-promote-commits.txt
 wc -l /tmp/sp1-promote-commits.txt
 ```
 
-- [ ] **Step 2: Create promote branch**
+(The file is still named `sp1-promote-commits.txt` for backwards compatibility with later steps that reference it.)
+
+- [ ] **Step 2: Use forward-port branch on develop base**
+
+The worktree branch (renamed earlier) is `forward-port/main-to-develop-20260513`, currently at `origin/develop` HEAD. Confirm:
 
 ```bash
-BRANCH="promote/develop-to-main-$(date +%Y%m%d)"
-git checkout -b "$BRANCH" origin/main
-echo "$BRANCH" > /tmp/sp1-promote-branch
 git branch --show-current
+echo "forward-port/main-to-develop-20260513" > /tmp/sp1-promote-branch
+git rev-parse HEAD
+git rev-parse origin/develop
 ```
 
-Expected: prints `promote/develop-to-main-20260513` (or current date).
+Expected: branch name matches; the two SHAs match (worktree HEAD == origin/develop HEAD).
 
-- [ ] **Step 3: Merge develop with explicit conflict expectation**
+If the worktree branch is not on the right base, reset it: `git reset --hard origin/develop`.
+
+- [ ] **Step 3: Merge main into develop with explicit conflict expectation**
 
 ```bash
-git merge origin/develop --no-ff -m "promote: develop → main (1.1.0-dev.0 lane → stable)"
+git merge origin/main --no-ff -m "forward-port: main → develop (sync research-tier ext bumps)"
 ```
 
 Two outcomes:
@@ -179,21 +187,31 @@ git status --short | grep '^UU\|^AA\|^DD'
 For `Cargo.lock` conflicts:
 
 ```bash
-# Take develop's version (dev-lane stamping is the more recent state)
+# Take main's version (carries the research-tier ext-v1.2.0 lock state we're forward-porting)
 git checkout --theirs Cargo.lock
 cargo update --workspace --offline 2>/dev/null || cargo update --workspace
 git add Cargo.lock
 ```
 
-For `Cargo.toml` workspace version conflicts (likely between `0.1.0` on main and `1.1.0-dev.0` on develop):
-
-Edit `Cargo.toml` manually so `[workspace.package].version = "1.1.0-dev.0"` (take develop's value). Then:
+For each extension Cargo.toml conflict (main shows `version = "1.2.0"`, develop shows `version = "1.1.0-dev.0"`):
 
 ```bash
+# Take main's 1.2.0 — this is exactly the research-tier work we're forward-porting
+git checkout --theirs crates/http-extension/Cargo.toml
+git add crates/http-extension/Cargo.toml
+git checkout --theirs crates/platform-extension/Cargo.toml
+git add crates/platform-extension/Cargo.toml
+# Repeat for any other conflicting crates/<X>-extension/Cargo.toml
+```
+
+For workspace root `Cargo.toml` (if it shows in conflicts): keep `[workspace.package].version = "1.1.0-dev.0"` (develop's value — this is the dev-lane baseline; per-crate overrides ride on top). The merge should auto-resolve since the conflict is structural, not on the version field itself; if it does conflict on the version line, take `--ours`:
+
+```bash
+git checkout --ours Cargo.toml
 git add Cargo.toml
 ```
 
-For source-level conflicts: inspect each with `git diff --conflict diff3 <file>`, resolve preserving develop's intent unless main has a hotfix not present on develop (check via `git log origin/main -- <file>`).
+For source-level conflicts: inspect each with `git diff --conflict diff3 <file>`, resolve preserving main's intent unless develop has a fix not present on main (check via `git log origin/develop -- <file>`).
 
 After all conflicts resolved:
 
@@ -217,37 +235,41 @@ cargo test --workspace --locked 2>&1 | tail -20
 
 Expected: all three commands exit 0. If `cargo test` is slow or fails on network-dependent tests, run `cargo test --workspace --locked --offline` to confirm the failure is environmental, not logical.
 
-If clippy or tests fail with errors that exist on `origin/develop` HEAD too (verified by checking out `origin/develop` separately and running same), the failure is pre-existing — note it in the PR body but proceed.
+If clippy or tests fail with errors that exist on `origin/main` HEAD too (verified by checking out `origin/main` separately and running same), the failure is pre-existing — note it in the PR body but proceed.
 
-- [ ] **Step 6: Push promote branch**
+- [ ] **Step 6: Push forward-port branch**
 
 ```bash
 git push -u origin "$BRANCH"
 ```
 
+Where `$BRANCH=forward-port/main-to-develop-20260513` (already set in Step 2).
+
 Expected: success; remote prints PR creation URL.
 
-- [ ] **Step 7: Open PR `<promote-branch>` → main**
+- [ ] **Step 7: Open PR `<forward-port-branch>` → develop**
 
 ```bash
 gh pr create \
-  --base main \
+  --base develop \
   --head "$BRANCH" \
-  --title "promote: develop → main (1.1.0-dev.0 lane → stable)" \
+  --title "forward-port: main → develop (sync research-tier ext bumps)" \
   --body "$(cat <<EOF
 ## Why
 
-Prerequisite for SP-1: bootstrap three-tier branching (\`main\` → \`develop\` → \`research\`) in this repo. Need \`main\` and \`develop\` aligned before branching \`research\` off the unified base.
+Prerequisite for SP-1: bootstrap three-tier branching in this repo. Need \`develop\` to contain main's history (specifically the research-tier ext-v1.2.0 commits \`ef34024\` and \`6479956\`) before branching \`research\` off develop in Step 2.
 
-Per memory \`project_three_tier_branching\` (pilot in greentic-bundle, propagating to tier-3+ repos) and \`project_research_promote_cadence\` (research → develop → main promotion is the canonical direction; this one-time inverse merge unblocks the bootstrap).
+Direction (forward-port main → develop) matches the existing \`forward-port/main-to-develop-*\` PR pattern and preserves \`main\` as the stable lane. Per project memory \`project_three_tier_branching\` (pilot in greentic-bundle, propagating to tier-3+ repos): research is the innovation lane (most-ahead), develop is staging, main is stable. Three-tier promote direction is \`research → develop → main\`; this one-time forward-port establishes the unified develop baseline that research will branch from.
 
 ## What
 
-Merges \`origin/develop\` into \`origin/main\` via a no-ff merge commit. Commits being promoted:
+Merges \`origin/main\` into \`origin/develop\` via a no-ff merge commit. Commits being forward-ported (main → develop):
 
 \`\`\`
 $(cat /tmp/sp1-promote-commits.txt)
 \`\`\`
+
+Conflicts resolved by taking main's per-crate extension \`1.2.0\` versions (the research-tier bumps being forward-ported) and keeping develop's workspace \`1.1.0-dev.0\`.
 
 ## Test plan
 
@@ -258,7 +280,7 @@ $(cat /tmp/sp1-promote-commits.txt)
 
 ## Risk
 
-Cargo.lock and workspace version conflicts resolved by taking develop's (more recent) state. No code-level semantic changes — develop has been forward-port-synced from main periodically.
+Conflicts limited to Cargo.lock + per-crate extension Cargo.toml files. No source-level semantic changes — main and develop are version-tier divergent, not feature-divergent.
 
 ## References
 
@@ -296,24 +318,24 @@ Expected for proceed: `state: MERGED`. If `state: OPEN` or `CLOSED` (without mer
 
 **Files:** none modified; branch creation only.
 
-- [ ] **Step 1: Fetch the merged main**
+- [ ] **Step 1: Fetch the merged develop**
 
 ```bash
 cd "$(cat /tmp/sp1-worktree-path)"
 git fetch origin
-git log origin/main --oneline -n 3
+git log origin/develop --oneline -n 3
 ```
 
-Expected: top commit is the promote merge commit from Task 2.
+Expected: top commit is the forward-port merge commit from Task 2 (or a maintainer-modified equivalent).
 
-- [ ] **Step 2: Create research branch from current `origin/main`**
+- [ ] **Step 2: Create research branch from current `origin/develop`**
 
 ```bash
-git checkout -b research origin/main
+git checkout -b research origin/develop
 git log --oneline -n 1
 ```
 
-Expected: HEAD points at the same commit as `origin/main`.
+Expected: HEAD points at the same commit as `origin/develop`.
 
 - [ ] **Step 3: Push research to origin**
 
@@ -327,7 +349,7 @@ Expected: `[new branch] research -> research`.
 
 ```bash
 git ls-remote origin research
-git ls-remote origin main
+git ls-remote origin develop
 ```
 
 Expected: both commands print the same SHA. **Done criteria D2 satisfied here.**
@@ -901,9 +923,9 @@ Expected: each neighboring component's `:latest` digest is unchanged from pre-SP
 Print and verify each:
 
 ```bash
-echo "D1: main = post-promote SHA"
-git ls-remote origin main
-echo "expected: same SHA as $(cat /tmp/sp1-merge-sha) or fast-forward of promote PR merge"
+echo "D1: develop contains main's history (forward-port done)"
+git fetch origin
+git merge-base --is-ancestor origin/main origin/develop && echo "OK: main is ancestor of develop" || echo "FAIL: develop does not include main"
 
 echo "D2: research branch exists"
 git ls-remote origin research
