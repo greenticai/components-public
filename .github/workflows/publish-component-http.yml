@@ -1,0 +1,70 @@
+name: Publish Component HTTP
+
+# Publishes ghcr.io/greenticai/component/component-http on `component-http-v*` tag pushes.
+# Tag pattern is distinct so component-http ships independently from other components
+# under crates/. Version published = tag name with the leading `component-http-v` stripped.
+
+on:
+  push:
+    tags: ['component-http-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Component version (must match Cargo.toml)'
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#component-http-v}"
+          fi
+          echo "==> Publishing component-http@${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+
+      - name: Install cargo-component
+        run: cargo install cargo-component --version 0.21.1 --locked
+
+      - name: Build component
+        run: cargo component build -p component-http --release --target wasm32-wasip2 --locked
+
+      - name: Setup oras
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push component to OCI
+        run: |
+          set -euo pipefail
+          ARTIFACT="target/wasm32-wasip2/release/component_http.wasm"
+          test -f "$ARTIFACT"
+          oras push \
+            "ghcr.io/greenticai/component/component-http:${{ steps.ver.outputs.version }}" \
+            "${ARTIFACT}:application/wasm"
+
+      - name: Verify push by pulling back
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/verify
+          oras pull "ghcr.io/greenticai/component/component-http:${{ steps.ver.outputs.version }}" -o /tmp/verify
+          test -f /tmp/verify/component_http.wasm
