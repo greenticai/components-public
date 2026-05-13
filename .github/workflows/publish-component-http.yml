@@ -67,4 +67,4 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/verify
           oras pull "ghcr.io/greenticai/component/component-http:${{ steps.ver.outputs.version }}" -o /tmp/verify
-          test -f /tmp/verify/component_http.wasm
+          WASM=$(find /tmp/verify -name component_http.wasm | head -1); test -n "$WASM" && test -f "$WASM"
