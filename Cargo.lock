@@ -344,9 +344,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "greentic-interfaces-guest"
-version = "1.1.0-dev.25380112032"
+version = "1.1.0-dev.25540474673"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31869558530be66ec330013f12e47514d15b8c987c45f72b814c99864d88b833"
+checksum = "4a9871668ff192398dd4845399c83cca99e11a0411a6381184c9dfd8d696f424"
 dependencies = [
  "greentic-types",
  "wit-bindgen 0.57.1",
@@ -356,9 +356,9 @@ dependencies = [
 
 [[package]]
 name = "greentic-types"
-version = "1.1.0-dev.25376259391"
+version = "1.1.0-dev.25540461571"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20f2d79fd4554b6985d5fd529c88884dec49985c14846bf10b43c9a58ee16e1e"
+checksum = "df38b70a9539e751664e0c3e0a21d6b9ea48e5345d9089d16c5058f122055d30"
 dependencies = [
  "anyhow",
  "blake3",
@@ -409,9 +409,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 dependencies = [
  "foldhash",
 ]
@@ -439,7 +439,7 @@ dependencies = [
 
 [[package]]
 name = "http-extension"
-version = "1.1.0-dev.0"
+version = "1.2.0"
 dependencies = [
  "http-core",
  "serde",
@@ -449,9 +449,9 @@ dependencies = [
 
 [[package]]
 name = "hybrid-array"
-version = "0.4.11"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08d46837a0ed51fe95bd3b05de33cd64a1ee88fc797477ca48446872504507c5"
+checksum = "9155a582abd142abc056962c29e3ce5ff2ad5469f4246b537ed42c5deba857da"
 dependencies = [
  "typenum",
 ]
@@ -475,7 +475,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
  "serde",
  "serde_core",
 ]
@@ -500,7 +500,7 @@ checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 
 [[package]]
 name = "llm-generic-extension"
-version = "0.1.2"
+version = "1.2.0"
 dependencies = [
  "wit-bindgen-rt",
 ]
@@ -534,7 +534,7 @@ dependencies = [
 
 [[package]]
 name = "platform-extension"
-version = "1.1.0-dev.0"
+version = "1.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -860,14 +860,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e6fb4c2bee46c5ea4d40f8cdb5c131725cd976718ec56f1c8e82fbde5fa2a80"
 dependencies = [
  "bitflags",
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
  "indexmap",
  "semver",
 ]
 
 [[package]]
 name = "webhook-extension"
-version = "0.2.0"
+version = "1.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1049,7 +1049,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ffe4064318cdf3c08cb99343b44c039fcefe61ccdf58aa9975285f13d74d1fc"
 dependencies = [
  "anyhow",
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
  "id-arena",
  "indexmap",
  "log",
