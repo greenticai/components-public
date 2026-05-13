@@ -104,10 +104,42 @@ struct ApplyAnswersResult {
 static WASI_TARGET_MARKER: [u8; 13] = *b"wasm32-wasip2";
 
 #[cfg(target_arch = "wasm32")]
+mod bindings {
+    wit_bindgen::generate!({
+        path: "wit",
+        world: "component-v0-v6-v0",
+    });
+}
+
+#[cfg(target_arch = "wasm32")]
+use bindings::exports::greentic::component::{
+    component_descriptor, component_i18n,
+    component_qa::{self, QaMode},
+    component_runtime, component_schema,
+};
+
+#[cfg(target_arch = "wasm32")]
+use greentic_types::i18n_text::I18nText as CanonicalI18nText;
+#[cfg(target_arch = "wasm32")]
+use greentic_types::schemas::common::schema_ir::{
+    AdditionalProperties as CanonicalAdditionalProperties, SchemaIr as CanonicalSchemaIr,
+};
+#[cfg(target_arch = "wasm32")]
+use greentic_types::schemas::component::v0_6_0::{
+    ComponentDescribe, ComponentInfo, ComponentOperation, ComponentRunInput, ComponentRunOutput,
+    schema_hash,
+};
+#[cfg(target_arch = "wasm32")]
+use std::collections::BTreeMap;
+
+#[cfg(target_arch = "wasm32")]
 struct Component;
 
 #[cfg(target_arch = "wasm32")]
-impl node::Guest for Component {
+struct NodeCompat;
+
+#[cfg(target_arch = "wasm32")]
+impl node::Guest for NodeCompat {
     fn describe() -> node::ComponentDescriptor {
         node::ComponentDescriptor {
             name: COMPONENT_ID.to_string(),
@@ -180,11 +212,7 @@ impl node::Guest for Component {
             }
         };
 
-        let output = match op.as_str() {
-            "request" => handle_request(&input),
-            "stream" => handle_stream(&input),
-            other => serde_json::json!({"ok": false, "error": format!("unsupported op: {other}")}),
-        };
+        let output = run_op(&op, &input);
 
         Ok(node::InvocationResult {
             ok: true,
@@ -195,102 +223,214 @@ impl node::Guest for Component {
 }
 
 #[cfg(target_arch = "wasm32")]
-mod qa_exports {
-    use serde_json::Value;
-
-    wit_bindgen::generate!({
-        inline: r#"
-            package greentic:component@0.6.0;
-
-            interface component-qa {
-                enum qa-mode {
-                    default,
-                    setup,
-                    update,
-                    remove
-                }
-
-                qa-spec: func(mode: qa-mode) -> list<u8>;
-                apply-answers: func(mode: qa-mode, current-config: list<u8>, answers: list<u8>) -> list<u8>;
-            }
-
-            interface component-i18n {
-                i18n-keys: func() -> list<string>;
-            }
-
-            world wizard-support {
-                export component-qa;
-                export component-i18n;
-            }
-        "#,
-        world: "wizard-support",
-    });
-
-    pub struct WizardSupport;
-
-    impl exports::greentic::component::component_qa::Guest for WizardSupport {
-        fn qa_spec(mode: exports::greentic::component::component_qa::QaMode) -> Vec<u8> {
-            crate::canonical_cbor_bytes(&crate::qa::canonical_qa_spec(match mode {
-                exports::greentic::component::component_qa::QaMode::Default => "default",
-                exports::greentic::component::component_qa::QaMode::Setup => "setup",
-                exports::greentic::component::component_qa::QaMode::Update => "update",
-                exports::greentic::component::component_qa::QaMode::Remove => "remove",
-            }))
-        }
-
-        fn apply_answers(
-            mode: exports::greentic::component::component_qa::QaMode,
-            current_config: Vec<u8>,
-            answers: Vec<u8>,
-        ) -> Vec<u8> {
-            let answers: Value = match crate::decode_cbor(&answers) {
-                Ok(value) => value,
-                Err(err) => {
-                    return crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
-                        ok: false,
-                        config: None,
-                        error: Some(format!("invalid answers cbor: {err}")),
-                    });
-                }
-            };
-
-            let _ = mode; // all modes route through apply_answers; no-op removal is handled by empty answers
-
-            let base_cfg: http_core::config::ComponentConfig = if current_config.is_empty() {
-                http_core::config::ComponentConfig::default()
-            } else {
-                match crate::decode_cbor(&current_config) {
-                    Ok(v) => serde_json::from_value(v).unwrap_or_default(),
-                    Err(_) => http_core::config::ComponentConfig::default(),
-                }
-            };
-
-            match http_core::config::apply_answers(base_cfg, &answers) {
-                Ok(new_cfg) => crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
-                    ok: true,
-                    config: Some(new_cfg),
-                    error: None,
-                }),
-                Err(e) => crate::canonical_cbor_bytes(&crate::ApplyAnswersResult {
-                    ok: false,
-                    config: None,
-                    error: Some(e.to_string()),
-                }),
-            }
-        }
+fn run_op(op: &str, input: &Value) -> Value {
+    match op {
+        "request" => handle_request(input),
+        "stream" => handle_stream(input),
+        other => serde_json::json!({"ok": false, "error": format!("unsupported op: {other}")}),
     }
-
-    impl exports::greentic::component::component_i18n::Guest for WizardSupport {
-        fn i18n_keys() -> Vec<String> {
-            crate::I18N_KEYS.iter().map(|k| (*k).to_string()).collect()
-        }
-    }
-
-    export!(WizardSupport with_types_in self);
 }
 
 #[cfg(target_arch = "wasm32")]
-greentic_interfaces_guest::export_component_v060!(Component);
+fn empty_canonical_schema() -> CanonicalSchemaIr {
+    CanonicalSchemaIr::Object {
+        properties: BTreeMap::new(),
+        required: Vec::new(),
+        additional: CanonicalAdditionalProperties::Allow,
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_info() -> ComponentInfo {
+    ComponentInfo {
+        id: COMPONENT_ID.to_string(),
+        version: COMPONENT_VERSION.to_string(),
+        role: "tool".to_string(),
+        display_name: Some(CanonicalI18nText::new("http.component.display_name", None)),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_info_cbor() -> Vec<u8> {
+    canonical::to_canonical_cbor_allow_floats(&component_info()).unwrap_or_default()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_describe() -> ComponentDescribe {
+    // The component-http describe surface is currently expressed via the local
+    // SchemaIr in `describe.rs` (different shape from the canonical
+    // greentic_types SchemaIr). For the canonical describe payload we use an
+    // empty canonical Object schema as a structural placeholder; the
+    // authoritative schemas are returned by component-schema's
+    // input/output/config-schema functions (CBOR of the local SchemaIr).
+    let stub = empty_canonical_schema();
+    let op_schema_hash = schema_hash(&stub, &stub, &stub).unwrap_or_default();
+
+    let request_op = ComponentOperation {
+        id: "request".to_string(),
+        display_name: Some(CanonicalI18nText::new("http.op.request.title", None)),
+        input: ComponentRunInput {
+            schema: stub.clone(),
+        },
+        output: ComponentRunOutput {
+            schema: stub.clone(),
+        },
+        defaults: BTreeMap::new(),
+        redactions: Vec::new(),
+        constraints: BTreeMap::new(),
+        schema_hash: op_schema_hash.clone(),
+    };
+    let stream_op = ComponentOperation {
+        id: "stream".to_string(),
+        display_name: Some(CanonicalI18nText::new("http.op.stream.title", None)),
+        input: ComponentRunInput {
+            schema: stub.clone(),
+        },
+        output: ComponentRunOutput {
+            schema: stub.clone(),
+        },
+        defaults: BTreeMap::new(),
+        redactions: Vec::new(),
+        constraints: BTreeMap::new(),
+        schema_hash: op_schema_hash,
+    };
+
+    ComponentDescribe {
+        info: component_info(),
+        provided_capabilities: Vec::new(),
+        required_capabilities: vec![
+            "host:http".to_string(),
+            "host:secrets".to_string(),
+            "host:telemetry".to_string(),
+        ],
+        metadata: BTreeMap::new(),
+        operations: vec![request_op, stream_op],
+        config_schema: stub,
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_describe_cbor() -> Vec<u8> {
+    canonical::to_canonical_cbor_allow_floats(&component_describe()).unwrap_or_default()
+}
+
+#[cfg(target_arch = "wasm32")]
+impl component_descriptor::Guest for Component {
+    fn get_component_info() -> Vec<u8> {
+        component_info_cbor()
+    }
+
+    fn describe() -> Vec<u8> {
+        component_describe_cbor()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl component_schema::Guest for Component {
+    fn input_schema() -> Vec<u8> {
+        canonical::to_canonical_cbor_allow_floats(&input_schema()).unwrap_or_default()
+    }
+
+    fn output_schema() -> Vec<u8> {
+        canonical::to_canonical_cbor_allow_floats(&output_schema()).unwrap_or_default()
+    }
+
+    fn config_schema() -> Vec<u8> {
+        canonical::to_canonical_cbor_allow_floats(&config_schema()).unwrap_or_default()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl component_runtime::Guest for Component {
+    fn run(input: Vec<u8>, state: Vec<u8>) -> component_runtime::RunResult {
+        let input_json: Value = match decode_cbor(&input) {
+            Ok(value) => value,
+            Err(err) => {
+                let err_payload = serde_json::json!({
+                    "ok": false,
+                    "error": format!("invalid input cbor: {err}"),
+                });
+                return component_runtime::RunResult {
+                    output: canonical_cbor_bytes(&err_payload),
+                    new_state: state,
+                };
+            }
+        };
+
+        let op = input_json
+            .get("operation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("request");
+        let output = run_op(op, &input_json);
+
+        component_runtime::RunResult {
+            output: canonical_cbor_bytes(&output),
+            new_state: state,
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl component_qa::Guest for Component {
+    fn qa_spec(mode: QaMode) -> Vec<u8> {
+        let mode_key = match mode {
+            QaMode::Default => "default",
+            QaMode::Setup => "setup",
+            QaMode::Update => "update",
+            QaMode::Remove => "remove",
+        };
+        canonical_cbor_bytes(&qa::canonical_qa_spec(mode_key))
+    }
+
+    fn apply_answers(mode: QaMode, current_config: Vec<u8>, answers: Vec<u8>) -> Vec<u8> {
+        let _ = mode; // all modes route through apply_answers; no-op removal is handled by empty answers
+        let answers: Value = match decode_cbor(&answers) {
+            Ok(value) => value,
+            Err(err) => {
+                return canonical_cbor_bytes(&ApplyAnswersResult {
+                    ok: false,
+                    config: None,
+                    error: Some(format!("invalid answers cbor: {err}")),
+                });
+            }
+        };
+
+        let base_cfg: http_core::config::ComponentConfig = if current_config.is_empty() {
+            http_core::config::ComponentConfig::default()
+        } else {
+            match decode_cbor(&current_config) {
+                Ok(v) => serde_json::from_value(v).unwrap_or_default(),
+                Err(_) => http_core::config::ComponentConfig::default(),
+            }
+        };
+
+        match http_core::config::apply_answers(base_cfg, &answers) {
+            Ok(new_cfg) => canonical_cbor_bytes(&ApplyAnswersResult {
+                ok: true,
+                config: Some(new_cfg),
+                error: None,
+            }),
+            Err(e) => canonical_cbor_bytes(&ApplyAnswersResult {
+                ok: false,
+                config: None,
+                error: Some(e.to_string()),
+            }),
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl component_i18n::Guest for Component {
+    fn i18n_keys() -> Vec<String> {
+        I18N_KEYS.iter().map(|k| (*k).to_string()).collect()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+bindings::export!(Component with_types_in bindings);
+
+#[cfg(target_arch = "wasm32")]
+greentic_interfaces_guest::export_component_v060!(NodeCompat);
 
 // ============================================================================
 // CBOR helpers
