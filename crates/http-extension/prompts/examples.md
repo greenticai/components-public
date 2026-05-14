@@ -8,7 +8,7 @@
 ```json
 {
   "node_id": "post_to_crm",
-  "component": "oci://ghcr.io/greenticai/component/component-http:0.1.0",
+  "component": "oci://ghcr.io/greenticai/component/component-http:stable",
   "config": {
     "base_url": "https://crm.example.com",
     "auth_type": "bearer",
