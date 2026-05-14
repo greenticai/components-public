@@ -164,7 +164,7 @@ mod tests {
     fn valid_node_has_no_errors() {
         let node = json!({
             "node_id": "post_users",
-            "component": "oci://ghcr.io/greenticai/component/component-http:0.1.0",
+            "component": "oci://ghcr.io/greenticai/component/component-http:stable",
             "config": { "base_url": "https://api.example.com", "auth_type": "bearer", "auth_token": "secret:HTTP_TOKEN", "timeout_ms": 15000 },
             "inputs": { "method": "POST", "path": "/users" }
         });
