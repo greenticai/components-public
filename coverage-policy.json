@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "global": {
+    "line_coverage_min": 60.0
+  },
+  "defaults": {
+    "per_file_line_coverage_min": 60.0
+  },
+  "exclusions": {
+    "files": [
+      "crates/component-http/src/describe.rs",
+      "crates/component-http/src/stream.rs",
+      "crates/gtest-fixture-exporter/src/main.rs",
+      "crates/http-extension/src/bindings.rs",
+      "crates/http-extension/src/lib.rs",
+      "crates/llm-generic-extension/src/bindings.rs",
+      "crates/llm-generic-extension/src/lib.rs",
+      "crates/platform-extension/src/bindings.rs",
+      "crates/platform-extension/src/lib.rs",
+      "crates/webhook-extension/src/bindings.rs",
+      "crates/webhook-extension/src/lib.rs"
+    ]
+  },
+  "per_file": {}
+}

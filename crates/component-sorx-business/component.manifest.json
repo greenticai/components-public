@@ -1,0 +1,256 @@
+{
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "id": "ai.greentic.component-sorx-business",
+  "name": "component-sorx-business",
+  "version": "0.1.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
+  "operations": [
+    {
+      "name": "list_business_actions",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx list business actions input",
+        "type": "object",
+        "properties": {
+          "config": { "$ref": "#/$defs/config" }
+        },
+        "additionalProperties": true,
+        "$defs": {
+          "config": {
+            "type": "object",
+            "required": ["sorx_base_url"],
+            "properties": {
+              "sorx_base_url": { "type": "string", "format": "uri", "title": "Sorx backend URL" },
+              "auth": {
+                "type": "object",
+                "properties": {
+                  "kind": { "type": "string", "enum": ["none", "bearer_secret_ref"] },
+                  "secret_ref": { "type": "string" }
+                },
+                "additionalProperties": false
+              },
+              "timeout_ms": { "type": "integer", "minimum": 1, "default": 30000 },
+              "strict_tls": { "type": "boolean", "default": true }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    },
+    {
+      "name": "get_business_action_schema",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx get business action schema input",
+        "type": "object",
+        "required": ["action_id"],
+        "properties": {
+          "action_id": { "type": "string", "minLength": 1 },
+          "config": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    },
+    {
+      "name": "dry_run_locked_action",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx dry run locked action input",
+        "$ref": "#/$defs/action_input"
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    },
+    {
+      "name": "invoke_locked_action",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx invoke locked action input",
+        "$ref": "#/$defs/action_input"
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    },
+    {
+      "name": "query_business_entity",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx query business entity input",
+        "type": "object",
+        "required": ["concept", "selector"],
+        "properties": {
+          "concept": { "type": "string", "minLength": 1 },
+          "selector": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+              "kind": { "type": "string", "minLength": 1 },
+              "fields": { "type": "object", "additionalProperties": true }
+            },
+            "additionalProperties": true
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "limit": { "type": "integer", "minimum": 1, "default": 5 }
+            },
+            "additionalProperties": false
+          },
+          "config": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    },
+    {
+      "name": "query_business_evidence",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx query business evidence input",
+        "type": "object",
+        "required": ["scope"],
+        "properties": {
+          "scope": {
+            "type": "object",
+            "properties": {
+              "root_entities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["entity_type", "entity_id"],
+                  "properties": {
+                    "entity_type": { "type": "string", "minLength": 1 },
+                    "entity_id": { "type": "string", "minLength": 1 }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "include_related": {
+                "type": "array",
+                "items": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "additionalProperties": true
+          },
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1, "default": 5 },
+          "config": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    },
+    {
+      "name": "explain_business_action_mapping",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Sorx explain business action mapping input",
+        "$ref": "#/$defs/action_input"
+      },
+      "output_schema": { "$ref": "#/$defs/normalized_output" }
+    }
+  ],
+  "default_operation": "invoke_locked_action",
+  "config_schema": {
+    "type": "object",
+    "required": ["sorx_base_url"],
+    "properties": {
+      "sorx_base_url": { "type": "string", "format": "uri", "title": "Sorx backend URL" },
+      "auth": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["none", "bearer_secret_ref"] },
+          "secret_ref": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "timeout_ms": { "type": "integer", "minimum": 1, "default": 30000 },
+      "strict_tls": { "type": "boolean", "default": true }
+    },
+    "additionalProperties": false
+  },
+  "$defs": {
+    "action_input": {
+      "type": "object",
+      "required": ["action_ref", "values"],
+      "properties": {
+        "action_ref": {
+          "type": "object",
+          "required": ["id", "version", "contract_hash"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "contract_hash": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "values": { "type": "object", "additionalProperties": true },
+        "options": {
+          "type": "object",
+          "properties": {
+            "idempotency_key": { "type": "string" },
+            "require_explanation": { "type": "boolean", "default": true },
+            "dry_run_first": { "type": "boolean", "default": false },
+            "fail_on_warning": { "type": "boolean", "default": false }
+          },
+          "additionalProperties": false
+        },
+        "action_metadata": { "type": "object", "additionalProperties": true },
+        "config": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "normalized_output": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "action_ref": { "type": "object", "additionalProperties": true },
+        "result": { "type": ["object", "array", "string", "number", "boolean", "null"] },
+        "sorx": { "type": "object", "additionalProperties": true },
+        "explain": { "type": "object", "additionalProperties": true },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "supports": ["http"],
+  "profiles": {
+    "default": "stateless",
+    "supported": ["stateless"]
+  },
+  "secret_requirements": [],
+  "capabilities": {
+    "wasi": {
+      "filesystem": { "mode": "none", "mounts": [] },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "http": { "outbound": true },
+      "secrets": { "required": [] },
+      "telemetry": { "scope": "node" }
+    }
+  },
+  "limits": {
+    "memory_mb": 128,
+    "wall_time_ms": 5000
+  },
+  "artifacts": {
+    "component_wasm": "../../target/wasm32-wasip2/release/component_sorx_business.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

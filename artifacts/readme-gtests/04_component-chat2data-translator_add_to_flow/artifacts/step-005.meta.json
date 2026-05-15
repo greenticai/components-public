@@ -1,7 +1,7 @@
 {
   "step": 5,
   "line_no": 21,
-  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-translator --out /tmp/gtest-fQL6Rd/fixtures --default-answers /tmp/gtest-fQL6Rd/default.answers.json --setup-answers /tmp/gtest-fQL6Rd/setup.answers.json",
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-translator --out /tmp/gtest-SFb2dq/fixtures --default-answers /tmp/gtest-SFb2dq/default.answers.json --setup-answers /tmp/gtest-SFb2dq/setup.answers.json",
   "exit_code": 0,
-  "duration_ms": 139
+  "duration_ms": 136
 }

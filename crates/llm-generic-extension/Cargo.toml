@@ -6,10 +6,10 @@ license = "MIT"
 authors = ["Greentic"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dependencies]
-wit-bindgen-rt = { version = "0.35", features = ["bitflags"] }
+wit-bindgen-rt.workspace = true
 
 [package.metadata.component]
 package = "greentic:llm-generic"

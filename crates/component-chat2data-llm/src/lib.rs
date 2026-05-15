@@ -1362,6 +1362,52 @@ mod tests {
     use super::*;
 
     #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 3);
+        assert_eq!(describe.redactions[0].path, "$.api_key");
+        assert_eq!(describe.schema_hash, "chat2data-llm-schema-v1");
+
+        match input_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(additional_properties);
+                assert!(fields["message"].required);
+                assert!(fields.contains_key("context"));
+            }
+            _ => panic!("input schema should be an object"),
+        }
+
+        match config_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(!additional_properties);
+                assert!(fields["api_key"].required);
+                assert!(fields.contains_key("model"));
+            }
+            _ => panic!("config schema should be an object"),
+        }
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let spec = build_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical_qa_spec(mode));
+            assert!(decode_cbor(&encoded).is_ok());
+            if mode == "setup" {
+                assert_eq!(spec.questions.len(), 2);
+                assert_eq!(spec.defaults["model"], DEFAULT_MODEL);
+            }
+        }
+    }
+
+    #[test]
     fn test_build_system_prompt_empty_context() {
         let context = QueryContext::default();
         let prompt = build_system_prompt(&context);

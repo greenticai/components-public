@@ -1,7 +1,7 @@
 {
   "step": 5,
   "line_no": 20,
-  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-validator --out /tmp/gtest-EsBZqH/fixtures --default-answers /tmp/gtest-EsBZqH/default.answers.json --setup-answers /tmp/gtest-EsBZqH/setup.answers.json",
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-validator --out /tmp/gtest-iUqZ8y/fixtures --default-answers /tmp/gtest-iUqZ8y/default.answers.json --setup-answers /tmp/gtest-iUqZ8y/setup.answers.json",
   "exit_code": 0,
-  "duration_ms": 140
+  "duration_ms": 145
 }

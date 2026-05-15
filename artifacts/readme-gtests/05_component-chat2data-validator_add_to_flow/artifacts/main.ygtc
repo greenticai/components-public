@@ -15,20 +15,20 @@ meta:
     components:
       validator_default:
         abi_version: 0.6.0
-        added_at: 1774183440
+        added_at: 1778865174
         component_id: repo://local/component-chat2data-validator
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1774183440
+        updated_at: 1778865174
       validator_personalized:
         abi_version: 0.6.0
-        added_at: 1774183440
+        added_at: 1778865174
         component_id: repo://local/component-chat2data-validator
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1774183440
+        updated_at: 1778865174
     secrets_hints:
       validator_default: []
       validator_personalized: []

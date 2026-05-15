@@ -1279,6 +1279,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 2);
+        assert_eq!(describe.schema_hash, "chat2data-renderer-schema-v1");
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let spec = build_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical_qa_spec(mode));
+            assert!(decode_cbor(&encoded).is_ok());
+            if ["default", "setup", "update", "remove"].contains(&mode) {
+                assert_eq!(spec.mode, mode);
+            } else {
+                assert_eq!(spec.mode, "default");
+            }
+        }
+
+        let cfg = load_config(&json!({
+            "config": {
+                "max_list_items": 3,
+                "max_table_columns": 2,
+                "theme": {
+                    "accent_color": "#111111",
+                    "background_color": "#eeeeee"
+                }
+            }
+        }))
+        .unwrap();
+        assert_eq!(cfg.max_list_items, 3);
+        assert_eq!(cfg.max_table_columns, 2);
+        assert_eq!(cfg.theme.accent_color, "#111111");
+        assert_eq!(cfg.theme.background_color, "#eeeeee");
+    }
+
+    #[test]
     fn test_auto_select_single_row() {
         let data = QueryData {
             rows: vec![json!({"id": 1, "name": "Alice"})],
