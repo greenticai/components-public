@@ -1284,6 +1284,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 3);
+        assert_eq!(describe.redactions[0].path, "$.github_token");
+        assert_eq!(describe.schema_hash, "chat2data-executor-schema-v1");
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let spec = build_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical_qa_spec(mode));
+            assert!(decode_cbor(&encoded).is_ok());
+            if mode == "setup" {
+                assert_eq!(spec.questions.len(), 1);
+                assert_eq!(spec.questions[0].id, "github_token");
+            }
+        }
+
+        let cfg = load_config(&json!({
+            "config": {
+                "github_token": "secret:GITHUB_TOKEN"
+            }
+        }))
+        .unwrap();
+        assert_eq!(cfg.github_token.as_deref(), Some("secret:GITHUB_TOKEN"));
+    }
+
+    #[test]
     fn test_extract_rows_from_array() {
         let data = json!([
             {"id": 1, "name": "Alice"},
@@ -1373,5 +1401,83 @@ mod tests {
         let result = handle_execute_mcp_internal(&translated_query);
         assert_eq!(result.get("ok"), Some(&json!(true)));
         assert_eq!(result.get("requires_runtime_execution"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn handle_execute_reports_missing_and_unsupported_queries() {
+        let missing = handle_execute(&json!({}));
+        assert_eq!(missing["ok"], Value::Bool(false));
+        assert_eq!(missing["error"], "missing or invalid query");
+
+        let unsupported_query = TranslatedQuery {
+            target: "custom".to_string(),
+            query_type: "custom".to_string(),
+            query: QuerySpec::Mcp {
+                tool_name: "noop".to_string(),
+                arguments: json!({}),
+            },
+            renderer: "card".to_string(),
+            renderer_options: json!({}),
+            max_rows: 1,
+            query_hash: "hash".to_string(),
+        };
+        let unsupported = handle_execute(&json!({
+            "query": serde_json::to_value(unsupported_query).unwrap()
+        }));
+        assert_eq!(unsupported["ok"], Value::Bool(false));
+        assert_eq!(unsupported["error"], "unsupported query type: custom");
+    }
+
+    #[test]
+    fn github_and_mcp_handlers_reject_wrong_query_specs() {
+        let sql_query = TranslatedQuery {
+            target: "sqlite".to_string(),
+            query_type: "sql".to_string(),
+            query: QuerySpec::Sql {
+                sql: "SELECT 1".to_string(),
+                params: Vec::new(),
+                param_names: Vec::new(),
+            },
+            renderer: "table".to_string(),
+            renderer_options: json!({}),
+            max_rows: 1,
+            query_hash: "hash".to_string(),
+        };
+
+        let github = handle_execute_github_internal(&json!({}), &sql_query);
+        assert_eq!(github["ok"], Value::Bool(false));
+        assert_eq!(github["error"], "expected HTTP query spec");
+
+        let mcp = handle_execute_mcp_internal(&sql_query);
+        assert_eq!(mcp["ok"], Value::Bool(false));
+        assert_eq!(mcp["error"], "expected MCP query spec");
+    }
+
+    #[test]
+    fn github_handler_requires_token_before_sending() {
+        let translated_query = TranslatedQuery {
+            target: "github".to_string(),
+            query_type: "http".to_string(),
+            query: QuerySpec::Http {
+                method: "GET".to_string(),
+                path: "/repos/owner/repo/issues".to_string(),
+                query_params: BTreeMap::from([
+                    ("state".to_string(), "open".to_string()),
+                    ("label".to_string(), "bug bash".to_string()),
+                ]),
+                headers: BTreeMap::from([(
+                    "Accept".to_string(),
+                    "application/vnd.github+json".to_string(),
+                )]),
+            },
+            renderer: "list".to_string(),
+            renderer_options: json!({"compact": true}),
+            max_rows: 25,
+            query_hash: "hash".to_string(),
+        };
+
+        let result = handle_execute_github_internal(&json!({}), &translated_query);
+        assert_eq!(result["ok"], Value::Bool(false));
+        assert_eq!(result["error"], "GitHub token is required");
     }
 }

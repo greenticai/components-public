@@ -144,3 +144,67 @@ pub fn build_http_request(cfg: &ComponentConfig, input: &Value) -> Result<HttpRe
 fn load_config(input: &Value) -> Result<ComponentConfig, String> {
     crate::load_config(input)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg() -> ComponentConfig {
+        ComponentConfig {
+            base_url: Some("https://api.example.com/v1/".to_string()),
+            auth_type: "none".to_string(),
+            auth_token: None,
+            api_key_header: "X-Api-Key".to_string(),
+            default_headers: Some(json!({
+                "Accept": "application/json",
+                "X-Ignored": 42
+            })),
+            timeout_ms: 5000,
+        }
+    }
+
+    #[test]
+    fn build_request_merges_base_url_headers_and_string_body() {
+        let request = build_http_request(
+            &cfg(),
+            &json!({
+                "endpoint": "/users",
+                "method": "patch",
+                "headers": {
+                    "X-Trace": "trace-1"
+                },
+                "body": "raw"
+            }),
+        )
+        .unwrap();
+
+        assert_eq!(request.method, "PATCH");
+        assert_eq!(request.url, "https://api.example.com/v1/users");
+        assert_eq!(request.body, Some(b"raw".to_vec()));
+        assert!(
+            request
+                .headers
+                .contains(&("Accept".to_string(), "application/json".to_string()))
+        );
+        assert!(
+            request
+                .headers
+                .contains(&("X-Trace".to_string(), "trace-1".to_string()))
+        );
+        assert!(
+            request
+                .headers
+                .contains(&("Content-Type".to_string(), "application/json".to_string()))
+        );
+        assert!(!request.headers.iter().any(|(name, _)| name == "X-Ignored"));
+    }
+
+    #[test]
+    fn build_request_rejects_relative_url_without_base() {
+        let mut cfg = cfg();
+        cfg.base_url = None;
+
+        let err = build_http_request(&cfg, &json!({"url": "/relative"})).unwrap_err();
+        assert!(err.contains("invalid url"));
+    }
+}

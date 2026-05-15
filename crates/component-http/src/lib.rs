@@ -34,7 +34,7 @@ mod stream;
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 const COMPONENT_ID: &str = "http";
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[allow(dead_code)]
 const WORLD_ID: &str = "component-v0-v6-v0";
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -980,4 +980,98 @@ mod tests {
             "greentic.messaging.egress.default.default.default.webchat"
         );
     }
+
+    #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 2);
+        assert_eq!(describe.schema_hash, "events2msg-schema-v1");
+
+        let setup = build_qa_spec_json("setup");
+        assert_eq!(setup.mode, "setup");
+        assert_eq!(setup.questions.len(), 2);
+        assert_eq!(setup.defaults["default_provider"], "webchat");
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let canonical = canonical_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical);
+            assert!(decode_cbor(&encoded).is_ok());
+        }
+    }
+
+    #[test]
+    fn schemas_and_config_defaults_are_well_formed() {
+        match input_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(additional_properties);
+                assert!(fields.contains_key("event"));
+                assert!(fields.contains_key("message_template"));
+            }
+            _ => panic!("input schema should be an object"),
+        }
+
+        match output_schema() {
+            SchemaIr::Object { fields, .. } => assert!(fields.contains_key("payload")),
+            _ => panic!("output schema should be an object"),
+        }
+
+        match config_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(!additional_properties);
+                assert!(fields.contains_key("default_provider"));
+                assert!(fields.contains_key("default_channel"));
+            }
+            _ => panic!("config schema should be an object"),
+        }
+
+        let cfg = load_config(&json!({
+            "config": {
+                "default_provider": "teams",
+                "default_channel": "ops"
+            }
+        }))
+        .unwrap();
+        assert_eq!(cfg.default_provider.as_deref(), Some("teams"));
+        assert_eq!(cfg.default_channel.as_deref(), Some("ops"));
+    }
+
+    #[test]
+    fn route_uses_config_defaults_and_non_string_template_values() {
+        let output = handle_route(&json!({
+            "config": {
+                "default_provider": "teams",
+                "default_channel": "alerts"
+            },
+            "event": {
+                "count": 3,
+                "active": true,
+                "nested": {"kind": "incident"}
+            },
+            "message_template": "{{count}}/{{active}}/{{nested}}",
+            "message_type": "notice",
+            "conversation_id": "conv-1",
+            "metadata": {"priority": "high"}
+        }));
+
+        assert_eq!(output["ok"], Value::Bool(true));
+        assert_eq!(output["provider"], "teams");
+        assert_eq!(output["payload"]["channel_id"], "alerts");
+        assert_eq!(output["payload"]["conversation_id"], "conv-1");
+        assert_eq!(output["payload"]["message"]["type"], "notice");
+        assert_eq!(
+            output["payload"]["message"]["text"],
+            "3/true/{\"kind\":\"incident\"}"
+        );
+        assert_eq!(output["payload"]["metadata"]["priority"], "high");
+    }
 }

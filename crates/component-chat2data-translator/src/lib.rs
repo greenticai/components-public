@@ -1446,6 +1446,34 @@ fn log_event(_event: &str) {}
 mod tests {
     use super::*;
 
+    #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 2);
+        assert_eq!(describe.schema_hash, "chat2data-translator-schema-v1");
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let spec = build_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical_qa_spec(mode));
+            assert!(decode_cbor(&encoded).is_ok());
+            if mode == "setup" {
+                assert_eq!(spec.defaults["default_max_rows"], 1000);
+            }
+        }
+
+        let cfg = load_config(&json!({
+            "config": {
+                "default_max_rows": 25,
+                "github_api_url": "https://github.example/api"
+            }
+        }))
+        .unwrap();
+        assert_eq!(cfg.default_max_rows, 25);
+        assert_eq!(cfg.github_api_url, "https://github.example/api");
+    }
+
     fn sample_validated_intent() -> ValidatedIntent {
         ValidatedIntent {
             intent: Intent {
@@ -1662,6 +1690,109 @@ mod tests {
             assert_eq!(arguments.get("path"), Some(&json!("/src/main.rs")));
         } else {
             panic!("Expected MCP query");
+        }
+    }
+
+    #[test]
+    fn handle_translate_reports_missing_and_unsupported_inputs() {
+        let missing = handle_translate(&json!({}));
+        assert_eq!(missing["ok"], Value::Bool(false));
+        assert_eq!(missing["error"], "missing or invalid validated_intent");
+
+        let unsupported = handle_translate(&json!({
+            "validated_intent": {
+                "intent": {
+                    "target": "warehouse",
+                    "action": "select",
+                    "params": {},
+                    "renderer": "table",
+                    "renderer_options": {}
+                },
+                "max_rows": 10
+            }
+        }));
+        assert_eq!(unsupported["ok"], Value::Bool(false));
+        assert_eq!(unsupported["code"], "UNSUPPORTED_TARGET");
+    }
+
+    #[test]
+    fn handle_translate_batch_collects_successes_and_errors() {
+        let output = handle_translate_batch(&json!({
+            "validated_intents": [
+                {
+                    "intent": {
+                        "target": "mcp",
+                        "action": "read_file",
+                        "params": {"path": "README.md"},
+                        "renderer": "card",
+                        "renderer_options": {}
+                    },
+                    "max_rows": 1
+                },
+                {
+                    "intent": {
+                        "target": "sqlite",
+                        "action": "select",
+                        "params": {},
+                        "renderer": "table",
+                        "renderer_options": {}
+                    },
+                    "max_rows": 1
+                }
+            ]
+        }));
+
+        assert_eq!(output["ok"], Value::Bool(false));
+        assert_eq!(output["queries"].as_array().unwrap().len(), 1);
+        assert_eq!(output["errors"][0]["index"], 1);
+        assert_eq!(output["errors"][0]["error"]["code"], "MISSING_TABLE");
+    }
+
+    #[test]
+    fn select_query_handles_order_offset_and_null_operators() {
+        let intent = ValidatedIntent {
+            intent: Intent {
+                target: "sqlite".to_string(),
+                action: "select".to_string(),
+                params: json!({
+                    "table": "users",
+                    "where": {
+                        "deleted_at": {"$null": true},
+                        "score": {"$between": [10, 20]},
+                        "name": {"$like": "A%"}
+                    },
+                    "order_by": [
+                        {"column": "score", "direction": "desc"},
+                        {"column": "name", "direction": "sideways"}
+                    ],
+                    "limit": 50,
+                    "offset": 25
+                }),
+                renderer: "table".to_string(),
+                renderer_options: json!({}),
+            },
+            max_rows: 10,
+            sanitized_columns: Some(Vec::new()),
+        };
+
+        let result =
+            translate_sqlite(&intent.intent, &intent, &ComponentConfig::default()).unwrap();
+        if let QuerySpec::Sql {
+            sql,
+            params,
+            param_names,
+        } = result
+        {
+            assert!(sql.contains("SELECT * FROM users"));
+            assert!(sql.contains("deleted_at IS NULL"));
+            assert!(sql.contains("name LIKE"));
+            assert!(sql.contains("score BETWEEN"));
+            assert!(sql.contains("ORDER BY score DESC, name ASC"));
+            assert!(sql.contains("LIMIT 10 OFFSET 25"));
+            assert_eq!(params.len(), 3);
+            assert_eq!(param_names.len(), 3);
+        } else {
+            panic!("Expected SQL query");
         }
     }
 

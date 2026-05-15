@@ -36,6 +36,8 @@ pub mod greentic {
                 #[doc(hidden)]
                 pub unsafe fn _lift(val: u8) -> Kind {
                     if !cfg!(debug_assertions) {
+                        // Generated WIT enum lift uses transmute after the component ABI constrains discriminants; debug builds validate explicitly.
+                        // foxguard: ignore[rs/transmute-usage]
                         return ::core::mem::transmute(val);
                     }
                     match val {
@@ -106,6 +108,8 @@ pub mod greentic {
                 #[doc(hidden)]
                 pub unsafe fn _lift(val: u8) -> Severity {
                     if !cfg!(debug_assertions) {
+                        // Generated WIT enum lift uses transmute after the component ABI constrains discriminants; debug builds validate explicitly.
+                        // foxguard: ignore[rs/transmute-usage]
                         return ::core::mem::transmute(val);
                     }
                     match val {
@@ -216,6 +220,8 @@ pub mod greentic {
                 #[doc(hidden)]
                 pub unsafe fn _lift(val: u8) -> Level {
                     if !cfg!(debug_assertions) {
+                        // Generated WIT enum lift uses transmute after the component ABI constrains discriminants; debug builds validate explicitly.
+                        // foxguard: ignore[rs/transmute-usage]
                         return ::core::mem::transmute(val);
                     }
                     match val {
