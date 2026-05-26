@@ -33,8 +33,6 @@ const OPERATIONS: &[&str] = &[
     "get_business_action_schema",
     "dry_run_locked_action",
     "invoke_locked_action",
-    "query_business_entity",
-    "query_business_evidence",
     "explain_business_action_mapping",
 ];
 
@@ -328,26 +326,18 @@ where
     F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
 {
     match operation {
-        "list_business_actions" => {
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, None)
-        }
-        "get_business_action_schema" => {
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, None)
-        }
+        "list_business_actions" => list_agent_endpoint_actions(input, sender),
+        "get_business_action_schema" => get_agent_endpoint_schema(input, sender),
         "dry_run_locked_action" => {
             validate_action_input(input, true)?;
             validate_action_metadata(input)?;
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, action_ref(input))
+            dry_run_agent_endpoint_action(input, sender)
         }
         "invoke_locked_action" => {
             validate_action_input(input, true)?;
             validate_action_metadata(input)?;
             if option_bool(input, "dry_run_first") {
-                let dry_run = build_request("dry_run_locked_action", input)?;
-                let dry_run_output = normalize_response(sender(&dry_run)?, action_ref(input))?;
+                let dry_run_output = dry_run_agent_endpoint_action(input, sender)?;
                 if !dry_run_output
                     .get("ok")
                     .and_then(Value::as_bool)
@@ -356,23 +346,11 @@ where
                     return Ok(dry_run_output);
                 }
             }
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, action_ref(input))
-        }
-        "query_business_entity" => {
-            validate_entity_query(input)?;
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, None)
-        }
-        "query_business_evidence" => {
-            validate_evidence_query(input)?;
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, None)
+            invoke_agent_endpoint_action(input, sender)
         }
         "explain_business_action_mapping" => {
             validate_action_input(input, false)?;
-            let request = build_request(operation, input)?;
-            normalize_response(sender(&request)?, action_ref(input))
+            dry_run_agent_endpoint_action(input, sender)
         }
         other => Err(SorxError::InvalidInput {
             code: "unsupported_operation",
@@ -384,44 +362,19 @@ where
 pub fn build_request(operation: &str, input: &Value) -> Result<SorxRequest, SorxError> {
     let config = load_config(input)?;
     let (method, path, body) = match operation {
-        "list_business_actions" => ("GET", "/v1/sorx/business-actions".to_string(), None),
+        "list_business_actions" => ("GET", "/v1/sorx/tools".to_string(), None),
         "get_business_action_schema" => {
-            let id = action_id_from_input(input)?;
-            ("GET", format!("/v1/sorx/business-actions/{id}"), None)
+            let _ = action_id_from_input(input)?;
+            let _ = action_version_from_input(input)?;
+            ("GET", "/v1/sorx/tools".to_string(), None)
         }
-        "dry_run_locked_action" => {
-            let action_ref = parse_action_ref(input)?;
-            (
-                "POST",
-                format!("/v1/sorx/business-actions/{}/dry-run", action_ref.id),
-                Some(action_body(input, &action_ref)),
-            )
+        "dry_run_locked_action" | "explain_business_action_mapping" => {
+            let _ = parse_action_ref(input)?;
+            ("GET", "/v1/sorx/tools".to_string(), None)
         }
         "invoke_locked_action" => {
-            let action_ref = parse_action_ref(input)?;
-            (
-                "POST",
-                format!("/v1/sorx/business-actions/{}/invoke", action_ref.id),
-                Some(action_body(input, &action_ref)),
-            )
-        }
-        "query_business_entity" => (
-            "POST",
-            "/v1/sorx/entities/query".to_string(),
-            Some(input.clone()),
-        ),
-        "query_business_evidence" => (
-            "POST",
-            "/v1/sorx/evidence/query".to_string(),
-            Some(input.clone()),
-        ),
-        "explain_business_action_mapping" => {
-            let action_ref = parse_action_ref(input)?;
-            (
-                "POST",
-                format!("/v1/sorx/business-actions/{}/explain", action_ref.id),
-                Some(action_body(input, &action_ref)),
-            )
+            let _ = parse_action_ref(input)?;
+            ("GET", "/v1/sorx/routes".to_string(), None)
         }
         other => {
             return Err(SorxError::InvalidInput {
@@ -431,11 +384,20 @@ pub fn build_request(operation: &str, input: &Value) -> Result<SorxRequest, Sorx
         }
     };
 
+    request_from_config(&config, method, &path, body)
+}
+
+fn request_from_config(
+    config: &SorxConfig,
+    method: &str,
+    path: &str,
+    body: Option<Value>,
+) -> Result<SorxRequest, SorxError> {
     let mut headers = Vec::new();
     if body.is_some() {
         headers.push(("Content-Type".to_string(), "application/json".to_string()));
     }
-    if let Some(token) = resolve_auth_token(&config)? {
+    if let Some(token) = resolve_auth_token(config)? {
         headers.push(("Authorization".to_string(), format!("Bearer {token}")));
     }
 
@@ -458,12 +420,213 @@ pub fn build_request(operation: &str, input: &Value) -> Result<SorxRequest, Sorx
     })
 }
 
-fn action_body(input: &Value, action_ref: &ActionRef) -> Value {
-    json!({
-        "action_ref": action_ref,
-        "values": input.get("values").cloned().unwrap_or_else(|| json!({})),
-        "options": input.get("options").cloned().unwrap_or_else(|| json!({})),
+fn list_agent_endpoint_actions<F>(input: &Value, sender: &mut F) -> Result<Value, SorxError>
+where
+    F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
+{
+    let tools = send_json_request(sender, build_request("list_business_actions", input)?)?;
+    if tools.status >= 400 {
+        return Ok(normalize_error_status(tools.status, tools.body));
+    }
+    Ok(json!({
+        "ok": true,
+        "result": {
+            "schema": "greentic.sorx.agent-endpoint-actions.v1",
+            "actions": tools_as_actions(&tools.body)
+        },
+        "sorx": {
+            "status": tools.status,
+            "source": "/v1/sorx/tools"
+        }
+    }))
+}
+
+fn get_agent_endpoint_schema<F>(input: &Value, sender: &mut F) -> Result<Value, SorxError>
+where
+    F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
+{
+    let id = action_id_from_input(input)?;
+    let tools = send_json_request(sender, build_request("get_business_action_schema", input)?)?;
+    if tools.status >= 400 {
+        return Ok(normalize_error_status(tools.status, tools.body));
+    }
+    let Some(tool) = find_tool(&tools.body, &id) else {
+        return Ok(error_response(
+            "unknown_action",
+            format!("Sorx tool not found: {id}"),
+        ));
+    };
+    Ok(json!({
+        "ok": true,
+        "result": {
+            "schema": "greentic.sorx.agent-endpoint-action-schema.v1",
+            "id": tool_id(tool).unwrap_or(id.as_str()),
+            "version": action_version_from_input(input).unwrap_or_else(|_| "0.1.0".to_string()),
+            "input_schema": tool.get("input_schema").cloned().unwrap_or_else(|| json!({ "type": "object" })),
+            "output_schema": tool.get("output_schema").cloned().unwrap_or_else(|| json!({ "type": "object" }))
+        },
+        "sorx": {
+            "status": tools.status,
+            "source": "/v1/sorx/tools"
+        }
+    }))
+}
+
+fn dry_run_agent_endpoint_action<F>(input: &Value, sender: &mut F) -> Result<Value, SorxError>
+where
+    F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
+{
+    let parsed_ref = parse_action_ref(input)?;
+    let tools = send_json_request(sender, build_request("dry_run_locked_action", input)?)?;
+    if tools.status >= 400 {
+        return Ok(normalize_error_status(tools.status, tools.body));
+    }
+    let Some(tool) = find_tool(&tools.body, &parsed_ref.id) else {
+        return Ok(error_response(
+            "unknown_action",
+            format!("Sorx tool not found: {}", parsed_ref.id),
+        ));
+    };
+    Ok(json!({
+        "ok": true,
+        "action_ref": action_ref(input).unwrap_or_else(|| json!({})),
+        "result": {
+            "valid": true,
+            "canonical_payload": input.get("values").cloned().unwrap_or_else(|| json!({})),
+            "execution_target": {
+                "endpoint_id": tool.get("endpoint_id").cloned().unwrap_or_else(|| json!(parsed_ref.id)),
+                "operation_id": tool.get("operation_id").cloned().unwrap_or_else(|| json!(parsed_ref.id)),
+                "tool_name": tool.get("name").cloned().unwrap_or_else(|| json!(parsed_ref.id))
+            }
+        },
+        "explain": {
+            "source": "/v1/sorx/tools",
+            "tool": tool
+        },
+        "sorx": {
+            "status": tools.status,
+            "source": "/v1/sorx/tools"
+        }
+    }))
+}
+
+fn invoke_agent_endpoint_action<F>(input: &Value, sender: &mut F) -> Result<Value, SorxError>
+where
+    F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
+{
+    let parsed_ref = parse_action_ref(input)?;
+    let routes = send_json_request(sender, build_request("invoke_locked_action", input)?)?;
+    if routes.status >= 400 {
+        return Ok(normalize_error_status(routes.status, routes.body));
+    }
+    let Some(route) = find_route(&routes.body, &parsed_ref.id) else {
+        return Ok(error_response(
+            "unknown_action",
+            format!("Sorx route not found for action: {}", parsed_ref.id),
+        ));
+    };
+    let method = route
+        .get("method")
+        .and_then(Value::as_str)
+        .unwrap_or("POST")
+        .to_string();
+    let path = route
+        .get("path")
+        .and_then(Value::as_str)
+        .ok_or_else(|| invalid_code("invalid_route", "Sorx route is missing path"))?;
+    if path.contains('{') {
+        return Ok(error_response(
+            "route_parameters_required",
+            format!(
+                "Sorx route path contains parameters and cannot be invoked generically: {path}"
+            ),
+        ));
+    }
+    let config = load_config(input)?;
+    let body = if method == "GET" {
+        None
+    } else {
+        Some(input.get("values").cloned().unwrap_or_else(|| json!({})))
+    };
+    let invoke = send_json_request(sender, request_from_config(&config, &method, path, body)?)?;
+    normalize_response(
+        SorxResponse {
+            status: invoke.status,
+            headers: Vec::new(),
+            body: serde_json::to_vec(&invoke.body).unwrap_or_default(),
+        },
+        action_ref(input),
+    )
+}
+
+struct JsonResponse {
+    status: u16,
+    body: Value,
+}
+
+fn send_json_request<F>(sender: &mut F, request: SorxRequest) -> Result<JsonResponse, SorxError>
+where
+    F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
+{
+    let response = sender(&request)?;
+    Ok(JsonResponse {
+        status: response.status,
+        body: parse_body(&response.body),
     })
+}
+
+fn tools_as_actions(body: &Value) -> Value {
+    let actions = body
+        .get("tools")
+        .and_then(Value::as_array)
+        .map(|tools| {
+            tools
+                .iter()
+                .filter_map(|tool| {
+                    let id = tool_id(tool)?;
+                    Some(json!({
+                        "id": id,
+                        "version": "0.1.0",
+                        "versions": ["0.1.0"],
+                        "label": tool.get("name").cloned().unwrap_or_else(|| json!(id)),
+                        "description": tool.get("description").cloned().unwrap_or(Value::Null),
+                        "risk": tool.get("risk").cloned().unwrap_or(Value::Null),
+                        "input_schema": tool.get("input_schema").cloned().unwrap_or_else(|| json!({ "type": "object" })),
+                        "source": "sorx_tool"
+                    }))
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Value::Array(actions)
+}
+
+fn find_tool<'a>(body: &'a Value, id: &str) -> Option<&'a Value> {
+    body.get("tools")
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|tool| {
+            tool.get("name").and_then(Value::as_str) == Some(id)
+                || tool.get("endpoint_id").and_then(Value::as_str) == Some(id)
+                || tool.get("operation_id").and_then(Value::as_str) == Some(id)
+        })
+}
+
+fn find_route<'a>(body: &'a Value, id: &str) -> Option<&'a Value> {
+    body.get("routes")
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|route| {
+            route.get("endpoint_id").and_then(Value::as_str) == Some(id)
+                || route.get("operation_id").and_then(Value::as_str) == Some(id)
+        })
+}
+
+fn tool_id(tool: &Value) -> Option<&str> {
+    tool.get("endpoint_id")
+        .and_then(Value::as_str)
+        .or_else(|| tool.get("name").and_then(Value::as_str))
+        .or_else(|| tool.get("operation_id").and_then(Value::as_str))
 }
 
 fn normalize_response(
@@ -694,6 +857,12 @@ fn parse_action_ref(input: &Value) -> Result<ActionRef, SorxError> {
             "action_ref.id must not contain path separators or unsafe URL characters",
         ));
     }
+    if !valid_path_segment(&version) {
+        return Err(invalid_code(
+            "invalid_action_version",
+            "action_ref.version must not contain path separators or unsafe URL characters",
+        ));
+    }
     Ok(ActionRef {
         id,
         version,
@@ -720,6 +889,24 @@ fn action_id_from_input(input: &Value) -> Result<String, SorxError> {
         ));
     }
     Ok(id.to_string())
+}
+
+fn action_version_from_input(input: &Value) -> Result<String, SorxError> {
+    let version = input
+        .get("action_version")
+        .and_then(Value::as_str)
+        .or_else(|| input.get("version").and_then(Value::as_str))
+        .or_else(|| input.pointer("/action_ref/version").and_then(Value::as_str))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| invalid_code("missing_action_version", "action_version is required"))?;
+    if !valid_path_segment(version) {
+        return Err(invalid_code(
+            "invalid_action_version",
+            "action_version must not contain path separators or unsafe URL characters",
+        ));
+    }
+    Ok(version.to_string())
 }
 
 fn required_non_empty_string(
@@ -906,29 +1093,6 @@ fn validate_json_schema_subset(value: &Value, schema: &Value, path: &str) -> Res
     Ok(())
 }
 
-fn validate_entity_query(input: &Value) -> Result<(), SorxError> {
-    let root = input
-        .as_object()
-        .ok_or_else(|| invalid("Input must be an object"))?;
-    root.get("concept")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| invalid_code("missing_concept", "concept is required"))?;
-    root.get("selector")
-        .and_then(Value::as_object)
-        .ok_or_else(|| invalid_code("missing_selector", "selector must be an object"))?;
-    Ok(())
-}
-
-fn validate_evidence_query(input: &Value) -> Result<(), SorxError> {
-    input
-        .get("scope")
-        .and_then(Value::as_object)
-        .ok_or_else(|| invalid_code("missing_scope", "scope must be an object"))?;
-    Ok(())
-}
-
 fn is_drift_body(body: &Value) -> bool {
     let code = body
         .pointer("/error/code")
@@ -979,14 +1143,13 @@ fn invalid_code(code: &'static str, message: impl Into<String>) -> SorxError {
 
 pub fn operation_schema_json(operation: &str) -> Value {
     match operation {
-        "query_business_entity" => entity_query_schema_json(),
-        "query_business_evidence" => evidence_query_schema_json(),
         "list_business_actions" => json!({"type": "object", "additionalProperties": true}),
         "get_business_action_schema" => json!({
             "type": "object",
-            "required": ["action_id"],
+            "required": ["action_id", "action_version"],
             "properties": {
                 "action_id": { "type": "string", "minLength": 1 },
+                "action_version": { "type": "string", "minLength": 1 },
                 "config": { "type": "object", "additionalProperties": true }
             },
             "additionalProperties": true
@@ -1025,48 +1188,6 @@ pub fn action_input_schema_json() -> Value {
                 "additionalProperties": false
             },
             "action_metadata": { "type": "object", "additionalProperties": true },
-            "config": { "type": "object", "additionalProperties": true }
-        },
-        "additionalProperties": false
-    })
-}
-
-fn entity_query_schema_json() -> Value {
-    json!({
-        "type": "object",
-        "required": ["concept", "selector"],
-        "properties": {
-            "concept": { "type": "string", "minLength": 1 },
-            "selector": {
-                "type": "object",
-                "required": ["kind"],
-                "properties": {
-                    "kind": { "type": "string", "minLength": 1 },
-                    "fields": { "type": "object", "additionalProperties": true }
-                },
-                "additionalProperties": true
-            },
-            "options": {
-                "type": "object",
-                "properties": {
-                    "limit": { "type": "integer", "minimum": 1, "default": 5 }
-                },
-                "additionalProperties": false
-            },
-            "config": { "type": "object", "additionalProperties": true }
-        },
-        "additionalProperties": false
-    })
-}
-
-fn evidence_query_schema_json() -> Value {
-    json!({
-        "type": "object",
-        "required": ["scope"],
-        "properties": {
-            "scope": { "type": "object", "additionalProperties": true },
-            "query": { "type": "string" },
-            "limit": { "type": "integer", "minimum": 1, "default": 5 },
             "config": { "type": "object", "additionalProperties": true }
         },
         "additionalProperties": false
@@ -1120,41 +1241,17 @@ pub fn config_schema_json() -> Value {
 #[cfg(target_arch = "wasm32")]
 fn schema_for_op(operation: &str) -> SchemaIr {
     match operation {
-        "query_business_entity" => SchemaIr::Object {
-            properties: BTreeMap::from([
-                ("concept".to_string(), string_schema()),
-                (
-                    "selector".to_string(),
-                    SchemaIr::Object {
-                        properties: BTreeMap::from([("kind".to_string(), string_schema())]),
-                        required: vec!["kind".to_string()],
-                        additional: AdditionalProperties::Allow,
-                    },
-                ),
-            ]),
-            required: vec!["concept".to_string(), "selector".to_string()],
-            additional: AdditionalProperties::Forbid,
-        },
-        "query_business_evidence" => SchemaIr::Object {
-            properties: BTreeMap::from([(
-                "scope".to_string(),
-                SchemaIr::Object {
-                    properties: BTreeMap::new(),
-                    required: Vec::new(),
-                    additional: AdditionalProperties::Allow,
-                },
-            )]),
-            required: vec!["scope".to_string()],
-            additional: AdditionalProperties::Forbid,
-        },
         "list_business_actions" => SchemaIr::Object {
             properties: BTreeMap::new(),
             required: Vec::new(),
             additional: AdditionalProperties::Allow,
         },
         "get_business_action_schema" => SchemaIr::Object {
-            properties: BTreeMap::from([("action_id".to_string(), string_schema())]),
-            required: vec!["action_id".to_string()],
+            properties: BTreeMap::from([
+                ("action_id".to_string(), string_schema()),
+                ("action_version".to_string(), string_schema()),
+            ]),
+            required: vec!["action_id".to_string(), "action_version".to_string()],
             additional: AdditionalProperties::Allow,
         },
         _ => action_schema_ir(),
@@ -1237,8 +1334,6 @@ fn i18n_keys() -> Vec<String> {
         "operation.get_business_action_schema".to_string(),
         "operation.dry_run_locked_action".to_string(),
         "operation.invoke_locked_action".to_string(),
-        "operation.query_business_entity".to_string(),
-        "operation.query_business_evidence".to_string(),
         "operation.explain_business_action_mapping".to_string(),
         "qa.default.title".to_string(),
         "qa.default.description".to_string(),
@@ -1332,6 +1427,38 @@ mod tests {
         }
     }
 
+    fn tools_response() -> SorxResponse {
+        response(json!({
+            "schema": "greentic.sorx.tools.v1",
+            "tools": [{
+                "name": "record.payment",
+                "endpoint_id": "record.payment",
+                "operation_id": "record.payment",
+                "description": "Record a payment",
+                "risk": "low",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "amount": { "type": "integer" }
+                    },
+                    "required": ["amount"]
+                }
+            }]
+        }))
+    }
+
+    fn routes_response() -> SorxResponse {
+        response(json!({
+            "schema": "greentic.sorx.routes.v1",
+            "routes": [{
+                "endpoint_id": "record.payment",
+                "operation_id": "record.payment",
+                "method": "POST",
+                "path": "/v1/agent/payments/create"
+            }]
+        }))
+    }
+
     #[test]
     fn manifest_includes_all_operations() {
         let manifest: Value = serde_json::from_str(include_str!("../component.manifest.json"))
@@ -1375,76 +1502,81 @@ mod tests {
         let request = build_request("list_business_actions", &json!({ "config": config() }))
             .expect("request");
         assert_eq!(request.method, "GET");
-        assert_eq!(
-            request.url,
-            "https://sorx.example.test/v1/sorx/business-actions"
+        assert_eq!(request.url, "https://sorx.example.test/v1/sorx/tools");
+    }
+
+    #[test]
+    fn list_normalizes_sorx_tools_as_actions() {
+        let output = execute_operation_with_sender(
+            "list_business_actions",
+            &json!({ "config": config() }),
+            |_| Ok(tools_response()),
         );
+        assert_eq!(output["ok"], true);
+        assert_eq!(output["result"]["actions"][0]["id"], "record.payment");
+        assert_eq!(output["sorx"]["source"], "/v1/sorx/tools");
     }
 
     #[test]
     fn get_schema_maps_to_expected_endpoint() {
         let request = build_request(
             "get_business_action_schema",
-            &json!({ "config": config(), "action_id": "record.payment" }),
+            &json!({
+                "config": config(),
+                "action_id": "record.payment",
+                "action_version": "0.1.0"
+            }),
         )
         .expect("request");
         assert_eq!(request.method, "GET");
-        assert_eq!(
-            request.url,
-            "https://sorx.example.test/v1/sorx/business-actions/record.payment"
-        );
+        assert_eq!(request.url, "https://sorx.example.test/v1/sorx/tools");
     }
 
     #[test]
     fn unsafe_action_id_is_rejected() {
         let output = build_request(
             "get_business_action_schema",
-            &json!({ "config": config(), "action_id": "../bad" }),
+            &json!({
+                "config": config(),
+                "action_id": "../bad",
+                "action_version": "0.1.0"
+            }),
         )
         .expect_err("unsafe id");
         assert_eq!(output.code(), "invalid_action_id");
     }
 
     #[test]
-    fn dry_run_and_invoke_map_to_expected_endpoints() {
-        let input = action_input();
-        let dry_run = build_request("dry_run_locked_action", &input).expect("dry run request");
-        assert_eq!(dry_run.method, "POST");
-        assert!(dry_run.url.ends_with("/record.payment/dry-run"));
-        let invoke = build_request("invoke_locked_action", &input).expect("invoke request");
-        assert_eq!(invoke.method, "POST");
-        assert!(invoke.url.ends_with("/record.payment/invoke"));
+    fn unsafe_action_version_is_rejected() {
+        let output = build_request(
+            "get_business_action_schema",
+            &json!({
+                "config": config(),
+                "action_id": "record.payment",
+                "action_version": "../bad"
+            }),
+        )
+        .expect_err("unsafe version");
+        assert_eq!(output.code(), "invalid_action_version");
     }
 
     #[test]
-    fn explain_and_query_operations_map_to_expected_endpoints() {
+    fn dry_run_and_invoke_map_to_expected_endpoints() {
+        let input = action_input();
+        let dry_run = build_request("dry_run_locked_action", &input).expect("dry run request");
+        assert_eq!(dry_run.method, "GET");
+        assert!(dry_run.url.ends_with("/v1/sorx/tools"));
+        let invoke = build_request("invoke_locked_action", &input).expect("invoke request");
+        assert_eq!(invoke.method, "GET");
+        assert!(invoke.url.ends_with("/v1/sorx/routes"));
+    }
+
+    #[test]
+    fn explain_maps_to_dry_run_endpoint() {
         let explain =
             build_request("explain_business_action_mapping", &action_input()).expect("explain");
-        assert!(explain.url.ends_with("/record.payment/explain"));
-
-        let entity = build_request(
-            "query_business_entity",
-            &json!({
-                "config": config(),
-                "concept": "AnyConcept",
-                "selector": { "kind": "field_match", "fields": { "id": "1" } }
-            }),
-        )
-        .expect("entity");
-        assert_eq!(
-            entity.url,
-            "https://sorx.example.test/v1/sorx/entities/query"
-        );
-
-        let evidence = build_request(
-            "query_business_evidence",
-            &json!({ "config": config(), "scope": { "root_entities": [] } }),
-        )
-        .expect("evidence");
-        assert_eq!(
-            evidence.url,
-            "https://sorx.example.test/v1/sorx/evidence/query"
-        );
+        assert!(explain.url.ends_with("/v1/sorx/tools"));
+        assert_eq!(explain.method, "GET");
     }
 
     #[test]
@@ -1558,39 +1690,49 @@ mod tests {
         let calls = RefCell::new(Vec::new());
         let output = execute_operation_with_sender("invoke_locked_action", &input, |request| {
             calls.borrow_mut().push(request.url.clone());
-            Ok(SorxResponse {
-                status: 400,
-                headers: Vec::new(),
-                body: br#"{"error":{"code":"invalid_values","message":"bad values"}}"#.to_vec(),
-            })
+            Ok(response(
+                json!({ "schema": "greentic.sorx.tools.v1", "tools": [] }),
+            ))
         });
         assert_eq!(output["ok"], false);
-        assert_eq!(output["error"]["code"], "invalid_values");
+        assert_eq!(output["error"]["code"], "unknown_action");
         assert_eq!(calls.borrow().len(), 1);
-        assert!(calls.borrow()[0].ends_with("/dry-run"));
+        assert!(calls.borrow()[0].ends_with("/v1/sorx/tools"));
     }
 
     #[test]
     fn sorx_success_and_error_are_normalized() {
-        let ok = execute_operation_with_sender("invoke_locked_action", &action_input(), |_| {
-            Ok(response(json!({
-                "result": { "id": "result_1" },
-                "audit_event_id": "audit_1",
-                "policy_decision": "allow",
-                "approval_required": false
-            })))
-        });
+        let calls = RefCell::new(0);
+        let ok =
+            execute_operation_with_sender("invoke_locked_action", &action_input(), |request| {
+                *calls.borrow_mut() += 1;
+                if request.url.ends_with("/v1/sorx/routes") {
+                    return Ok(routes_response());
+                }
+                assert_eq!(
+                    request.url,
+                    "https://sorx.example.test/v1/agent/payments/create"
+                );
+                Ok(response(json!({
+                    "ok": true,
+                    "result": { "id": "result_1" },
+                })))
+            });
         assert_eq!(ok["ok"], true);
         assert_eq!(ok["result"]["id"], "result_1");
-        assert_eq!(ok["sorx"]["audit_event_id"], "audit_1");
+        assert_eq!(*calls.borrow(), 2);
 
-        let err = execute_operation_with_sender("invoke_locked_action", &action_input(), |_| {
-            Ok(SorxResponse {
-                status: 403,
-                headers: Vec::new(),
-                body: br#"{"error":{"code":"policy_denied","message":"no"}}"#.to_vec(),
-            })
-        });
+        let err =
+            execute_operation_with_sender("invoke_locked_action", &action_input(), |request| {
+                if request.url.ends_with("/v1/sorx/routes") {
+                    return Ok(routes_response());
+                }
+                Ok(SorxResponse {
+                    status: 403,
+                    headers: Vec::new(),
+                    body: br#"{"error":{"code":"policy_denied","message":"no"}}"#.to_vec(),
+                })
+            });
         assert_eq!(err["ok"], false);
         assert_eq!(err["error"]["code"], "policy_denied");
         assert_eq!(err["sorx"]["status"], 403);
@@ -1598,37 +1740,25 @@ mod tests {
 
     #[test]
     fn sorx_hash_mismatch_is_normalized_as_drift() {
-        let output = execute_operation_with_sender("invoke_locked_action", &action_input(), |_| {
-            Ok(SorxResponse {
-                status: 409,
-                headers: Vec::new(),
-                body: br#"{"error":{"code":"contract_hash_mismatch","message":"changed"}}"#
-                    .to_vec(),
-            })
-        });
+        let output =
+            execute_operation_with_sender("invoke_locked_action", &action_input(), |request| {
+                if request.url.ends_with("/v1/sorx/routes") {
+                    return Ok(routes_response());
+                }
+                Ok(SorxResponse {
+                    status: 409,
+                    headers: Vec::new(),
+                    body: br#"{"error":{"code":"contract_hash_mismatch","message":"changed"}}"#
+                        .to_vec(),
+                })
+            });
         assert_eq!(output["error"]["code"], "action_contract_drift");
-    }
-
-    #[test]
-    fn query_concepts_are_opaque_and_read_only() {
-        let input = json!({
-            "config": config(),
-            "concept": "ArbitraryBusinessConcept",
-            "selector": { "kind": "field_match", "fields": { "any": "value" } }
-        });
-        let request = build_request("query_business_entity", &input).expect("request");
-        assert_eq!(request.method, "POST");
-        assert!(!request.url.ends_with("/invoke"));
-        let body: Value = serde_json::from_slice(&request.body.unwrap()).expect("body");
-        assert_eq!(body["concept"], "ArbitraryBusinessConcept");
     }
 
     #[test]
     fn component_schemas_have_no_domain_specific_fields() {
         let all = json!({
             "action": action_input_schema_json(),
-            "entity": entity_query_schema_json(),
-            "evidence": evidence_query_schema_json(),
             "config": config_schema_json(),
         })
         .to_string();

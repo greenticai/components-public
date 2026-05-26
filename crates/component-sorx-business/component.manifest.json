@@ -45,9 +45,10 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Sorx get business action schema input",
         "type": "object",
-        "required": ["action_id"],
+        "required": ["action_id", "action_version"],
         "properties": {
           "action_id": { "type": "string", "minLength": 1 },
+          "action_version": { "type": "string", "minLength": 1 },
           "config": { "type": "object", "additionalProperties": true }
         },
         "additionalProperties": true
@@ -69,75 +70,6 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Sorx invoke locked action input",
         "$ref": "#/$defs/action_input"
-      },
-      "output_schema": { "$ref": "#/$defs/normalized_output" }
-    },
-    {
-      "name": "query_business_entity",
-      "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Sorx query business entity input",
-        "type": "object",
-        "required": ["concept", "selector"],
-        "properties": {
-          "concept": { "type": "string", "minLength": 1 },
-          "selector": {
-            "type": "object",
-            "required": ["kind"],
-            "properties": {
-              "kind": { "type": "string", "minLength": 1 },
-              "fields": { "type": "object", "additionalProperties": true }
-            },
-            "additionalProperties": true
-          },
-          "options": {
-            "type": "object",
-            "properties": {
-              "limit": { "type": "integer", "minimum": 1, "default": 5 }
-            },
-            "additionalProperties": false
-          },
-          "config": { "type": "object", "additionalProperties": true }
-        },
-        "additionalProperties": false
-      },
-      "output_schema": { "$ref": "#/$defs/normalized_output" }
-    },
-    {
-      "name": "query_business_evidence",
-      "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Sorx query business evidence input",
-        "type": "object",
-        "required": ["scope"],
-        "properties": {
-          "scope": {
-            "type": "object",
-            "properties": {
-              "root_entities": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["entity_type", "entity_id"],
-                  "properties": {
-                    "entity_type": { "type": "string", "minLength": 1 },
-                    "entity_id": { "type": "string", "minLength": 1 }
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "include_related": {
-                "type": "array",
-                "items": { "type": "object", "additionalProperties": true }
-              }
-            },
-            "additionalProperties": true
-          },
-          "query": { "type": "string" },
-          "limit": { "type": "integer", "minimum": 1, "default": 5 },
-          "config": { "type": "object", "additionalProperties": true }
-        },
-        "additionalProperties": false
       },
       "output_schema": { "$ref": "#/$defs/normalized_output" }
     },

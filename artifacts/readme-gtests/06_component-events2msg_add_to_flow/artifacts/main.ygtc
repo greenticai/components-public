@@ -15,20 +15,20 @@ meta:
     components:
       events2msg_default:
         abi_version: 0.6.0
-        added_at: 1778865174
+        added_at: 1779815180
         component_id: repo://local/component-events2msg
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1778865174
+        updated_at: 1779815180
       events2msg_personalized:
         abi_version: 0.6.0
-        added_at: 1778865174
+        added_at: 1779815180
         component_id: repo://local/component-events2msg
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1778865174
+        updated_at: 1779815180
     secrets_hints:
       events2msg_default: []
       events2msg_personalized: []

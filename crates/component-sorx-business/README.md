@@ -1,8 +1,8 @@
 # component-sorx-business
 
-`component-sorx-business` is a generic runtime component for calling locked Sorx business action endpoints from Greentic flows.
+`component-sorx-business` is a generic runtime component for calling locked Sorx agent endpoint actions from Greentic flows.
 
-Sorx remains authoritative for business semantics: action locks, contract hashes, schemas, policy, approvals, provider bindings, execution, and audit. This component validates the generic envelope, builds Sorx HTTP requests, and normalizes responses.
+Sorx remains authoritative for business semantics: agent endpoint catalogs, schemas, policy, approvals, provider bindings, execution, and audit. This component validates the generic envelope, discovers Sorx tools/routes, invokes the matching runtime endpoint, and normalizes responses.
 
 ## Configuration
 
@@ -45,7 +45,7 @@ Pass configuration under `config` in the invocation payload until the runtime pr
 }
 ```
 
-Contract hashes are required so a flow node can prove which action contract it was generated and reviewed against. If Sorx or local metadata reports drift, the component returns `action_contract_drift`; revalidate or regenerate the flow node against the current Sorx action metadata.
+Contract hashes are required so a flow node can prove which action contract it was generated and reviewed against. Sorx currently exposes agent endpoints through `/v1/sorx/tools` and `/v1/sorx/routes`; the component validates contract hashes against local action metadata when that metadata is present.
 
 Local validation checks the generic envelope and, when action metadata with an input schema is available, a small JSON Schema subset: object type, required fields, primitive value types, arrays, and `additionalProperties: false`. Sorx still performs authoritative validation.
 
@@ -53,13 +53,11 @@ Local validation checks the generic envelope and, when action metadata with an i
 
 | Operation | Sorx endpoint |
 | --- | --- |
-| `list_business_actions` | `GET /v1/sorx/business-actions` |
-| `get_business_action_schema` | `GET /v1/sorx/business-actions/{id}` |
-| `dry_run_locked_action` | `POST /v1/sorx/business-actions/{id}/dry-run` |
-| `invoke_locked_action` | `POST /v1/sorx/business-actions/{id}/invoke` |
-| `query_business_entity` | `POST /v1/sorx/entities/query` |
-| `query_business_evidence` | `POST /v1/sorx/evidence/query` |
-| `explain_business_action_mapping` | `POST /v1/sorx/business-actions/{id}/explain` |
+| `list_business_actions` | `GET /v1/sorx/tools` |
+| `get_business_action_schema` | `GET /v1/sorx/tools` and local filter by action id |
+| `dry_run_locked_action` | `GET /v1/sorx/tools` and local validation/explain |
+| `invoke_locked_action` | `GET /v1/sorx/routes`, then invoke the matched route |
+| `explain_business_action_mapping` | `GET /v1/sorx/tools` and local validation/explain |
 
 ## Output
 
@@ -87,39 +85,5 @@ Errors use:
   "sorx": {
     "status": 400
   }
-}
-```
-
-## Read-Only Queries
-
-Entity and evidence queries treat concept names, entity types, and entity IDs as opaque strings. The component does not maintain a domain-specific allowlist.
-
-```json
-{
-  "concept": "concept_name",
-  "selector": {
-    "kind": "field_match",
-    "fields": {
-      "external_id": "entity_id"
-    }
-  },
-  "options": {
-    "limit": 5
-  }
-}
-```
-
-```json
-{
-  "scope": {
-    "root_entities": [
-      {
-        "entity_type": "entity_type",
-        "entity_id": "entity_id"
-      }
-    ]
-  },
-  "query": "evidence query",
-  "limit": 5
 }
 ```
