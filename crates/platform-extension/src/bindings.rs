@@ -36,8 +36,6 @@ pub mod greentic {
                 #[doc(hidden)]
                 pub unsafe fn _lift(val: u8) -> Kind {
                     if !cfg!(debug_assertions) {
-                        // Generated WIT enum lift uses transmute after the component ABI constrains discriminants; debug builds validate explicitly.
-                        // foxguard: ignore[rs/transmute-usage]
                         return ::core::mem::transmute(val);
                     }
                     match val {
@@ -108,8 +106,6 @@ pub mod greentic {
                 #[doc(hidden)]
                 pub unsafe fn _lift(val: u8) -> Severity {
                     if !cfg!(debug_assertions) {
-                        // Generated WIT enum lift uses transmute after the component ABI constrains discriminants; debug builds validate explicitly.
-                        // foxguard: ignore[rs/transmute-usage]
                         return ::core::mem::transmute(val);
                     }
                     match val {
@@ -220,8 +216,6 @@ pub mod greentic {
                 #[doc(hidden)]
                 pub unsafe fn _lift(val: u8) -> Level {
                     if !cfg!(debug_assertions) {
-                        // Generated WIT enum lift uses transmute after the component ABI constrains discriminants; debug builds validate explicitly.
-                        // foxguard: ignore[rs/transmute-usage]
                         return ::core::mem::transmute(val);
                     }
                     match val {
@@ -3046,7 +3040,9 @@ macro_rules! __export_extension_impl {
 #[doc(inline)]
 pub(crate) use __export_extension_impl as export;
 #[cfg(target_arch = "wasm32")]
-#[unsafe(link_section = "component-type:wit-bindgen:0.41.0:greentic:http:extension:encoded world")]
+#[unsafe(
+    link_section = "component-type:wit-bindgen:0.41.0:greentic:http:extension:encoded world"
+)]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
 pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 2335] = *b"\
