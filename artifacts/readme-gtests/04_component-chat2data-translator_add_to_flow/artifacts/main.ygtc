@@ -15,20 +15,20 @@ meta:
     components:
       translator_default:
         abi_version: 0.6.0
-        added_at: 1778865175
+        added_at: 1779815181
         component_id: repo://local/component-chat2data-translator
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1778865175
+        updated_at: 1779815181
       translator_personalized:
         abi_version: 0.6.0
-        added_at: 1778865175
+        added_at: 1779815181
         component_id: repo://local/component-chat2data-translator
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1778865175
+        updated_at: 1779815181
     secrets_hints:
       translator_default: []
       translator_personalized: []
