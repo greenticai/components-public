@@ -22,9 +22,9 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
 name = "autocfg"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "base64"
@@ -125,7 +125,7 @@ dependencies = [
 
 [[package]]
 name = "component-chat2data-executor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "component-chat2data-llm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -147,7 +147,7 @@ dependencies = [
 
 [[package]]
 name = "component-chat2data-renderer"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -158,7 +158,7 @@ dependencies = [
 
 [[package]]
 name = "component-chat2data-translator"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -169,7 +169,7 @@ dependencies = [
 
 [[package]]
 name = "component-chat2data-validator"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "component-events2msg"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "component-http"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -203,7 +203,7 @@ dependencies = [
 
 [[package]]
 name = "component-msg2events"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "component-pack2flow"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "component-sorx-business"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
@@ -257,9 +257,9 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "crypto-common"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77727bb15fa921304124b128af125e7e3b968275d1b108b379190264f4423710"
+checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
 dependencies = [
  "hybrid-array",
 ]
@@ -320,9 +320,9 @@ dependencies = [
 
 [[package]]
 name = "displaydoc"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97369cbbc041bc366949bc74d34658d6cda5621039731c6310521892a3a20ae0"
+checksum = "1ac70aa55017e108007fbaf5aa0f54b021c98f92ff8af59d42eda9da96e3dd4f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -391,7 +391,7 @@ dependencies = [
 
 [[package]]
 name = "gtest-fixture-exporter"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "greentic-types",
@@ -432,7 +432,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "http-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -509,21 +509,21 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.29"
+version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+checksum = "616ec5685824bcc94416c6d4a7a446eea774a31efd7062c8480ba6fd06d7a6e5"
 
 [[package]]
 name = "memchr"
-version = "2.8.0"
+version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
+checksum = "6b947ae49db0d222b1dbc6b113ce7248a3fc3a6ca21b696717bfc000ba4484d8"
 
 [[package]]
 name = "num-conv"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6673768db2d862beb9b39a78fdcb1a69439615d5794a1be50caa9bc92c81967"
+checksum = "521739c6d2bac4aa25192232afe6841231376b2b26d4d9fae5ecf8ca5772e441"
 
 [[package]]
 name = "num-traits"
@@ -629,9 +629,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.149"
+version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
  "itoa",
  "memchr",
@@ -958,18 +958,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.48"
+version = "0.8.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eed437bf9d6692032087e337407a86f04cd8d6a16a37199ed57949d415bd68e9"
+checksum = "bce33a6288fa3f072a8c2c7d0f2fdbb90e28298f0135c1f99b96c3db2efcc60b"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.48"
+version = "0.8.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e3cd084b1788766f53af483dd21f93881ff30d7320490ec3ef7526d203bad4"
+checksum = "8fd425244944f4ab65ccff928e7323354c5a018c75838362fdce749dfad2ee1e"
 dependencies = [
  "proc-macro2",
  "quote",

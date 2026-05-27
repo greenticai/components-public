@@ -15,20 +15,20 @@ meta:
     components:
       llm_default:
         abi_version: 0.6.0
-        added_at: 1779815179
+        added_at: 1779901618
         component_id: repo://local/component-chat2data-llm
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1779815179
+        updated_at: 1779901618
       llm_personalized:
         abi_version: 0.6.0
-        added_at: 1779815179
+        added_at: 1779901618
         component_id: repo://local/component-chat2data-llm
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1779815179
+        updated_at: 1779901618
     secrets_hints:
       llm_default: []
       llm_personalized: []

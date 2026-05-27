@@ -11,6 +11,8 @@
 #   SORX_URL            Default Sorx URL shown in the page.
 #   SORX_TEST_OPEN=0    Do not try to open a browser.
 #   WEBCHAT_ASSET_DIR   Directory containing webchat-gui assets.
+#   SORX_BUSINESS_COMPONENT_CLI
+#                       Optional path to a prebuilt component-sorx-business-cli.
 
 set -euo pipefail
 
@@ -126,7 +128,7 @@ if [ -n "${WEBCHAT_ASSETS}" ] && [ -f "${WEBCHAT_ASSETS}/embed.js" ]; then
   done
 fi
 
-python3 - "${WWW_DIR}" "${HOST}" "${PORT}" "${SORX_URL}" "${OPEN_BROWSER}" "${SKIN}" "${HAS_WEBCHAT_ASSETS}" <<'PY'
+python3 - "${WWW_DIR}" "${HOST}" "${PORT}" "${SORX_URL}" "${OPEN_BROWSER}" "${SKIN}" "${HAS_WEBCHAT_ASSETS}" "${ROOT_DIR}" <<'PY'
 from __future__ import annotations
 
 import base64
@@ -136,6 +138,7 @@ import mimetypes
 import os
 import posixpath
 import ssl
+import subprocess
 import sys
 import threading
 import time
@@ -154,6 +157,7 @@ sorx_url = sys.argv[4].rstrip("/")
 open_browser = sys.argv[5] != "0"
 skin = sys.argv[6]
 has_webchat_assets = sys.argv[7] == "1"
+root_dir = Path(sys.argv[8]).resolve()
 STATE_LOCK = threading.Lock()
 CONVERSATIONS: dict[str, list[dict]] = {}
 STREAMS: dict[str, list] = {}
@@ -600,6 +604,81 @@ def send_sorx(method: str, url: str, body: bytes | None, headers: dict[str, str]
         return error.code, parse_body(error.read())
 
 
+def component_input(request: dict) -> dict:
+    base_url = str(request.get("baseUrl") or "").strip().rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        raise ValueError("Sorx URL must start with http:// or https://")
+    payload = request.get("payload")
+    if not isinstance(payload, dict):
+        payload = {}
+    secret = str(request.get("secret") or "").strip()
+    body = dict(payload)
+    body["config"] = {
+        "sorx_base_url": base_url,
+        "auth": {"kind": "bearer_secret_ref", "secret_ref": "SORX_TEST_TOKEN"} if secret else {"kind": "none"},
+        "timeout_ms": int(request.get("timeoutMs") or 30000),
+        "strict_tls": bool(request.get("strictTls", True)),
+    }
+    return body
+
+
+def component_command() -> list[str]:
+    configured = os.environ.get("SORX_BUSINESS_COMPONENT_CLI")
+    if configured:
+        return [configured]
+    binary = root_dir / "target" / "debug" / "component-sorx-business-cli"
+    if binary.exists():
+        return [str(binary)]
+    return [
+        "cargo",
+        "run",
+        "--quiet",
+        "-p",
+        "component-sorx-business",
+        "--bin",
+        "component-sorx-business-cli",
+        "--",
+    ]
+
+
+def invoke_component_operation(request: dict) -> dict:
+    operation = str(request.get("operation") or "invoke_locked_action")
+    env = os.environ.copy()
+    secret = str(request.get("secret") or "").strip()
+    if secret:
+        env["SORX_TEST_TOKEN"] = secret
+    command = component_command() + [operation]
+    try:
+        completed = subprocess.run(
+            command,
+            input=json.dumps(component_input(request)),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=str(root_dir),
+            env=env,
+            timeout=max(int(request.get("timeoutMs") or 30000) / 1000 + 10, 15),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": {"code": "component_timeout", "message": "component-sorx-business timed out"}}
+    except Exception as error:
+        return {"ok": False, "error": {"code": "component_invoke_failed", "message": str(error)}}
+    if completed.returncode != 0:
+        message = completed.stderr.strip() or completed.stdout.strip() or f"component exited with {completed.returncode}"
+        return {"ok": False, "error": {"code": "component_invoke_failed", "message": message}}
+    try:
+        parsed = json.loads(completed.stdout)
+    except Exception as error:
+        return {
+            "ok": False,
+            "error": {"code": "component_output_invalid", "message": f"component output was not JSON: {error}"},
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        }
+    return parsed if isinstance(parsed, dict) else {"ok": True, "result": parsed}
+
+
 def discover_business_actions(request: dict) -> dict:
     base_url = str(request.get("baseUrl") or "").strip().rstrip("/")
     if not base_url.startswith(("http://", "https://")):
@@ -611,24 +690,56 @@ def discover_business_actions(request: dict) -> dict:
     if secret:
         headers["Authorization"] = f"Bearer {secret}"
 
-    status, tools_body = send_sorx("GET", f"{base_url}/v1/sorx/tools", None, headers, timeout_ms, strict_tls)
-    if status >= 400:
-        return normalized_error(status, tools_body)
+    component_listing = invoke_component_operation({**request, "operation": "list_business_actions", "payload": {}})
+    if not component_listing.get("ok"):
+        return component_listing
+    status = int(component_listing.get("sorx", {}).get("status") or 200)
     routes_status, routes_body = send_sorx("GET", f"{base_url}/v1/sorx/routes", None, headers, timeout_ms, strict_tls)
-    tools = tools_body.get("tools", []) if isinstance(tools_body, dict) else []
+    metrics_status, metrics_body = send_sorx("GET", f"{base_url}/v1/sorx/metrics", None, headers, timeout_ms, strict_tls)
+    tools = component_listing.get("result", {}).get("actions", []) if isinstance(component_listing.get("result"), dict) else []
     routes = routes_body.get("routes", []) if routes_status < 400 and isinstance(routes_body, dict) else []
+    metrics = metrics_body.get("metrics", []) if metrics_status < 400 and isinstance(metrics_body, dict) else []
+    route_by_action = {
+        value: route
+        for route in routes if isinstance(route, dict)
+        for value in (route.get("endpoint_id"), route.get("operation_id"))
+        if isinstance(value, str)
+    }
+    metric_by_name = {
+        metric.get("name"): metric
+        for metric in metrics if isinstance(metric, dict) and isinstance(metric.get("name"), str)
+    }
     actions = []
     for tool in tools if isinstance(tools, list) else []:
         if not isinstance(tool, dict):
             continue
-        action_id_value = tool.get("endpoint_id") or tool.get("name") or tool.get("operation_id")
+        action_id_value = tool.get("id") or tool.get("endpoint_id") or tool.get("name") or tool.get("operation_id")
         if not isinstance(action_id_value, str):
             continue
+        operation_id_value = tool.get("operation_id") if isinstance(tool.get("operation_id"), str) else action_id_value
+        is_metric_query = operation_id_value.startswith("metrics.query.")
+        route = route_by_action.get(action_id_value) or route_by_action.get(operation_id_value)
+        if not route and not is_metric_query:
+            continue
+        metric_name = operation_id_value.removeprefix("metrics.query.") if is_metric_query else ""
+        metric = metric_by_name.get(metric_name) if metric_name else None
+        display_name = (
+            (metric.get("label") if isinstance(metric, dict) else None)
+            or tool.get("title")
+            or tool.get("label")
+            or (route.get("title") if isinstance(route, dict) else None)
+            or tool.get("name")
+            or action_id_value
+        )
         actions.append({
             "id": action_id_value,
+            "name": tool.get("name") or action_id_value,
+            "display_name": display_name,
+            "metric_name": metric_name,
+            "kind": "metric_query" if is_metric_query else "agent_route",
             "version": "0.1.0",
             "versions": ["0.1.0"],
-            "label": tool.get("name") or action_id_value,
+            "label": display_name,
             "description": tool.get("description"),
             "risk": tool.get("risk"),
             "input_schema": tool.get("input_schema") or {"type": "object"},
@@ -656,12 +767,13 @@ def proxy_to_sorx(request: dict) -> dict:
     if str(request.get("operation") or "") == "discover_business_actions":
         return discover_business_actions(request)
     if str(request.get("operation") or "") in {
+        "list_business_actions",
         "get_business_action_schema",
         "dry_run_locked_action",
         "explain_business_action_mapping",
         "invoke_locked_action",
     }:
-        return proxy_agent_endpoint_action(request)
+        return invoke_component_operation(request)
     method, url, body, action_ref = build_sorx_request(request)
     headers = {"Accept": "application/json"}
     if body is not None:
@@ -740,6 +852,21 @@ def proxy_agent_endpoint_action(request: dict) -> dict:
             "explain": {"source": "/v1/sorx/tools", "tool": tool},
             "sorx": {"status": tools_status, "source": "/v1/sorx/tools"},
         }
+
+    if action_id_value.startswith("metrics.query.") or str(tool.get("operation_id") or "").startswith("metrics.query."):
+        metric_name = str(tool.get("operation_id") or action_id_value).removeprefix("metrics.query.")
+        values = payload.get("values") if isinstance(payload.get("values"), dict) else {}
+        invoke_headers = dict(headers)
+        invoke_headers["Content-Type"] = "application/json"
+        status, parsed = send_sorx(
+            "POST",
+            f"{base_url}/v1/sorx/metrics/{urllib.parse.quote(metric_name, safe='')}/query",
+            dump_json(values),
+            invoke_headers,
+            timeout_ms,
+            strict_tls,
+        )
+        return normalize_response(status, parsed, action_ref_value)
 
     routes_status, routes_body = send_sorx("GET", f"{base_url}/v1/sorx/routes", None, headers, timeout_ms, strict_tls)
     if routes_status >= 400:
@@ -1204,6 +1331,9 @@ write_text(
         }});
         const data = await response.json();
         result.textContent = pretty(data);
+        if (data.ok) {{
+          reloadWebChat();
+        }}
         return data;
       }}
 
@@ -1252,10 +1382,19 @@ write_text(
           actionPicker.append(option);
           return;
         }}
+        function displayActionName(action) {{
+          const raw = action.display_name || action.label || action.name || action.id || "";
+          return String(raw)
+            .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+            .replace(/[_-]+/g, " ")
+            .replace(/\\s+/g, " ")
+            .trim();
+        }}
         for (const action of actions) {{
           const option = document.createElement('option');
           option.value = `${{action.id}}@@${{action.version}}`;
-          option.textContent = `${{action.label || action.id}} @ ${{action.version}}`;
+          option.textContent = displayActionName(action);
+          option.title = `${{action.id}} @ ${{action.version}}`;
           actionPicker.append(option);
         }}
       }}
