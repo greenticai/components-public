@@ -520,6 +520,9 @@ where
         return Ok(normalize_error_status(routes.status, routes.body));
     }
     let Some(route) = find_route(&routes.body, &parsed_ref.id) else {
+        if let Some(metric_name) = metric_query_name(&parsed_ref.id) {
+            return invoke_metric_query(input, metric_name, sender);
+        }
         return Ok(error_response(
             "unknown_action",
             format!("Sorx route not found for action: {}", parsed_ref.id),
@@ -557,6 +560,57 @@ where
         },
         action_ref(input),
     )
+}
+
+fn invoke_metric_query<F>(
+    input: &Value,
+    metric_name: &str,
+    sender: &mut F,
+) -> Result<Value, SorxError>
+where
+    F: FnMut(&SorxRequest) -> Result<SorxResponse, SorxHttpError>,
+{
+    let config = load_config(input)?;
+    let values = input.get("values").cloned().unwrap_or_else(|| json!({}));
+    let path = format!(
+        "/v1/sorx/metrics/{}/query",
+        percent_encode_path_segment(metric_name)
+    );
+    let invoke = send_json_request(
+        sender,
+        request_from_config(&config, "POST", &path, Some(values))?,
+    )?;
+    normalize_response(
+        SorxResponse {
+            status: invoke.status,
+            headers: Vec::new(),
+            body: serde_json::to_vec(&invoke.body).unwrap_or_default(),
+        },
+        action_ref(input),
+    )
+}
+
+fn metric_query_name(id: &str) -> Option<&str> {
+    id.strip_prefix("metrics.query.")
+        .filter(|name| !name.is_empty() && is_safe_path_segment(name))
+}
+
+fn is_safe_path_segment(value: &str) -> bool {
+    value
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+}
+
+fn percent_encode_path_segment(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-') {
+            encoded.push(char::from(byte));
+        } else {
+            encoded.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    encoded
 }
 
 struct JsonResponse {
@@ -1753,6 +1807,47 @@ mod tests {
                 })
             });
         assert_eq!(output["error"]["code"], "action_contract_drift");
+    }
+
+    #[test]
+    fn metrics_query_actions_invoke_metrics_endpoint() {
+        let mut input = action_input();
+        input["action_ref"]["id"] =
+            Value::String("metrics.query.waiting_list_referral_count".to_string());
+        input["values"] = json!({ "lab_id": "lab-1" });
+        let calls = RefCell::new(Vec::new());
+        let output = execute_operation_with_sender("invoke_locked_action", &input, |request| {
+            calls.borrow_mut().push((
+                request.method.clone(),
+                request.url.clone(),
+                request.body.clone(),
+            ));
+            if request.url.ends_with("/v1/sorx/routes") {
+                return Ok(response(json!({
+                    "schema": "greentic.sorx.routes.v1",
+                    "routes": []
+                })));
+            }
+            assert_eq!(request.method, "POST");
+            assert_eq!(
+                request.url,
+                "https://sorx.example.test/v1/sorx/metrics/waiting_list_referral_count/query"
+            );
+            assert_eq!(
+                request.body.as_deref(),
+                Some(br#"{"lab_id":"lab-1"}"#.as_slice())
+            );
+            Ok(response(json!({
+                "schema": "greentic.sorx.metric-query-result.v1",
+                "result": {
+                    "metric": "waiting_list_referral_count",
+                    "rows": [{ "dimensions": {}, "value": 2.0 }]
+                }
+            })))
+        });
+        assert_eq!(output["ok"], true);
+        assert_eq!(output["result"]["metric"], "waiting_list_referral_count");
+        assert_eq!(calls.borrow().len(), 2);
     }
 
     #[test]
