@@ -8,6 +8,15 @@ authors = [
 ]
 build = "build.rs"
 
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+wit-bindgen-rt.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+http-core.workspace = true
+
 [package.metadata.component]
 package = "greentic:http"
 
@@ -22,27 +31,3 @@ path = "wit/deps/greentic/extension-host"
 
 [package.metadata.component.target.dependencies."greentic:extension-design"]
 path = "wit/deps/greentic/extension-design"
-
-[lib]
-crate-type = [
-    "cdylib",
-    "rlib",
-]
-
-[dependencies]
-serde_json = "1"
-
-[dependencies.wit-bindgen-rt]
-version = "0.35"
-features = [
-    "bitflags",
-]
-
-[dependencies.serde]
-version = "1"
-features = [
-    "derive",
-]
-
-[dependencies.http-core]
-path = "../http-core"

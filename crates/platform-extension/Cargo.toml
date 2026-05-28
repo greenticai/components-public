@@ -8,6 +8,14 @@ authors = [
 ]
 description = "Greentic platform-bootstrap design extension. Ships the start nodeType — the only structural primitive the platform itself owns. Webhook trigger moved to greentic.webhook in 0.2.0; the generic LLM nodeType moved to greentic.llm-generic in 0.3.0."
 
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+wit-bindgen-rt.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
 [package.metadata.component]
 package = "greentic:platform"
 
@@ -22,24 +30,3 @@ path = "wit/deps/greentic/extension-host"
 
 [package.metadata.component.target.dependencies."greentic:extension-design"]
 path = "wit/deps/greentic/extension-design"
-
-[lib]
-crate-type = [
-    "cdylib",
-    "rlib",
-]
-
-[dependencies]
-serde_json = "1"
-
-[dependencies.wit-bindgen-rt]
-version = "0.35"
-features = [
-    "bitflags",
-]
-
-[dependencies.serde]
-version = "1"
-features = [
-    "derive",
-]

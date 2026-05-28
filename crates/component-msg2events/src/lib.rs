@@ -1062,4 +1062,95 @@ mod tests {
         assert!(data["attachments"].is_array());
         assert!(data["entities"].is_array());
     }
+
+    #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 3);
+        assert_eq!(describe.schema_hash, "msg2events-schema-v1");
+
+        let setup = build_qa_spec_json("setup");
+        assert_eq!(setup.mode, "setup");
+        assert_eq!(setup.questions.len(), 2);
+        assert_eq!(setup.defaults["default_event_type"], "message.text");
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let canonical = canonical_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical);
+            assert!(decode_cbor(&encoded).is_ok());
+        }
+    }
+
+    #[test]
+    fn schemas_and_config_defaults_are_well_formed() {
+        match input_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(additional_properties);
+                assert!(fields.contains_key("message"));
+                assert!(fields.contains_key("target_flow"));
+                assert!(fields.contains_key("event_type"));
+            }
+            _ => panic!("input schema should be an object"),
+        }
+
+        match output_schema() {
+            SchemaIr::Object { fields, .. } => assert!(fields.contains_key("event")),
+            _ => panic!("output schema should be an object"),
+        }
+
+        match config_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(!additional_properties);
+                assert!(fields.contains_key("default_flow"));
+                assert!(fields.contains_key("default_event_type"));
+            }
+            _ => panic!("config schema should be an object"),
+        }
+
+        let cfg = load_config(&json!({
+            "config": {
+                "default_flow": "flow-a",
+                "default_event_type": "message.default"
+            }
+        }))
+        .unwrap();
+        assert_eq!(cfg.default_flow.as_deref(), Some("flow-a"));
+        assert_eq!(cfg.default_event_type.as_deref(), Some("message.default"));
+    }
+
+    #[test]
+    fn route_uses_defaults_and_extracts_source_context() {
+        let output = handle_route(&json!({
+            "config": {
+                "default_flow": "support-flow",
+                "default_event_type": "message.override"
+            },
+            "provider": "slack",
+            "channel_id": "C123",
+            "conversation_id": "thread-1",
+            "from": {"id": "U123"},
+            "message": "hello",
+            "timestamp": "2026-01-01T00:00:00Z",
+            "metadata": {"source": "unit-test"}
+        }));
+
+        assert_eq!(output["ok"], Value::Bool(true));
+        assert_eq!(output["target_flow"], "support-flow");
+        assert_eq!(output["event"]["event_type"], "message.override");
+        assert_eq!(output["event"]["source"]["provider"], "slack");
+        assert_eq!(output["event"]["source"]["user_id"], "U123");
+        assert_eq!(output["event"]["data"]["text"], "hello");
+        assert_eq!(output["event"]["metadata"]["source"], "unit-test");
+        assert_eq!(output["event"]["timestamp"], "2026-01-01T00:00:00Z");
+    }
 }

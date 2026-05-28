@@ -1498,6 +1498,43 @@ fn log_event(_event: &str) {}
 mod tests {
     use super::*;
 
+    #[test]
+    fn describe_payload_and_qa_specs_are_stable() {
+        let describe = build_describe_payload();
+        assert_eq!(describe.provider, COMPONENT_ID);
+        assert_eq!(describe.world, WORLD_ID);
+        assert_eq!(describe.operations.len(), 2);
+        assert_eq!(describe.schema_hash, "chat2data-validator-schema-v1");
+
+        match input_schema() {
+            SchemaIr::Object {
+                fields,
+                additional_properties,
+                ..
+            } => {
+                assert!(additional_properties);
+                assert!(fields["intent"].required);
+            }
+            _ => panic!("input schema should be an object"),
+        }
+
+        match output_schema() {
+            SchemaIr::Object { fields, .. } => {
+                assert!(fields.contains_key("valid"));
+            }
+            _ => panic!("output schema should be an object"),
+        }
+
+        for mode in ["default", "setup", "update", "remove", "unknown"] {
+            let spec = build_qa_spec(mode);
+            let encoded = canonical_cbor_bytes(&canonical_qa_spec(mode));
+            assert!(decode_cbor(&encoded).is_ok());
+            if mode == "setup" {
+                assert_eq!(spec.defaults["strict_mode"], true);
+            }
+        }
+    }
+
     fn sample_whitelist() -> Whitelist {
         let mut tables = BTreeMap::new();
         tables.insert(

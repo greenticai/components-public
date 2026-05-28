@@ -49,7 +49,7 @@ pub enum SchemaIr {
     },
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationDescriptor {
     pub name: String,
@@ -57,14 +57,14 @@ pub struct OperationDescriptor {
     pub description: I18nText,
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RedactionRule {
     pub path: String,
     pub strategy: String,
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DescribePayload {
     pub provider: String,
@@ -218,7 +218,7 @@ pub fn config_schema() -> SchemaIr {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[allow(dead_code)]
 pub fn op(name: &str, title_key: &str, description_key: &str) -> OperationDescriptor {
     OperationDescriptor {
         name: name.to_string(),

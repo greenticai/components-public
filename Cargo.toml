@@ -20,6 +20,7 @@ serde_json = "1"
 thiserror = "2"
 tracing = "0.1"
 greentic-types = ">=1.1.0-dev, <1.2.0-0"
+http-core = { path = "crates/http-core" }
 
 [workspace.dependencies.serde]
 version = "1"
@@ -35,11 +36,17 @@ features = [
 ]
 
 [workspace.dependencies.wit-bindgen]
-version = "0.54"
+version = "0.57"
 default-features = false
 features = [
     "macros",
     "realloc",
+]
+
+[workspace.dependencies.wit-bindgen-rt]
+version = "0.35"
+features = [
+    "bitflags",
 ]
 
 [workspace.lints.rust]
