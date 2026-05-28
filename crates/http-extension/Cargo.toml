@@ -1,9 +1,11 @@
 [package]
 name = "http-extension"
-version = "1.2.0"
+version = "1.2.0-dev.0"
 edition = "2024"
 license = "MIT"
-authors = ["Greentic"]
+authors = [
+    "Greentic",
+]
 build = "build.rs"
 
 [lib]
@@ -21,7 +23,11 @@ package = "greentic:http"
 [package.metadata.component.target]
 path = "wit"
 
-[package.metadata.component.target.dependencies]
-"greentic:extension-base" = { path = "wit/deps/greentic/extension-base" }
-"greentic:extension-host" = { path = "wit/deps/greentic/extension-host" }
-"greentic:extension-design" = { path = "wit/deps/greentic/extension-design" }
+[package.metadata.component.target.dependencies."greentic:extension-base"]
+path = "wit/deps/greentic/extension-base"
+
+[package.metadata.component.target.dependencies."greentic:extension-host"]
+path = "wit/deps/greentic/extension-host"
+
+[package.metadata.component.target.dependencies."greentic:extension-design"]
+path = "wit/deps/greentic/extension-design"
