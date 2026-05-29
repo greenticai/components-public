@@ -1,7 +1,7 @@
 {
   "step": 7,
   "line_no": 30,
-  "command": "greentic-flow add-step --flow /tmp/test-pack/component-http/flows/main.ygtc --node-id http_personalized --component repo://local/component-http --resolver fixture:///tmp/gtest-RTcR79/fixtures --wizard-mode setup --answers-file /tmp/gtest-RTcR79/setup.answers.json --routing-out --after http_default",
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-http/flows/main.ygtc --node-id http_personalized --component repo://local/component-http --resolver fixture:///tmp/gtest-D72GJ4/fixtures --wizard-mode setup --answers-file /tmp/gtest-D72GJ4/setup.answers.json --routing-out --after http_default",
   "exit_code": 0,
-  "duration_ms": 35
+  "duration_ms": 36
 }

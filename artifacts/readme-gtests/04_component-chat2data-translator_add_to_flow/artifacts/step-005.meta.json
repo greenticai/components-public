@@ -1,7 +1,7 @@
 {
   "step": 5,
   "line_no": 21,
-  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-translator --out /tmp/gtest-Wy4teq/fixtures --default-answers /tmp/gtest-Wy4teq/default.answers.json --setup-answers /tmp/gtest-Wy4teq/setup.answers.json",
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-chat2data-translator --out /tmp/gtest-JLvbKo/fixtures --default-answers /tmp/gtest-JLvbKo/default.answers.json --setup-answers /tmp/gtest-JLvbKo/setup.answers.json",
   "exit_code": 0,
   "duration_ms": 141
 }

@@ -1,0 +1,7 @@
+{
+  "step": 12,
+  "line_no": 40,
+  "command": "grep -q secret_ref: SORX_TOKEN /tmp/test-pack/component-sorx-business/flows/main.ygtc",
+  "exit_code": 0,
+  "duration_ms": 1
+}
