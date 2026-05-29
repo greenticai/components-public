@@ -15,20 +15,20 @@ meta:
     components:
       pack2flow_default:
         abi_version: 0.6.0
-        added_at: 1779901617
+        added_at: 1780050987
         component_id: repo://local/component-pack2flow
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1779901617
+        updated_at: 1780050987
       pack2flow_personalized:
         abi_version: 0.6.0
-        added_at: 1779901617
+        added_at: 1780050987
         component_id: repo://local/component-pack2flow
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1779901617
+        updated_at: 1780050987
     secrets_hints:
       pack2flow_default: []
       pack2flow_personalized: []

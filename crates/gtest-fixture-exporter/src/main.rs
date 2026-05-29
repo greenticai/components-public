@@ -311,6 +311,18 @@ fn http_setup(answers: &Value) -> Value {
     Value::Object(config)
 }
 
+fn sorx_business_setup(answers: &Value) -> Value {
+    merge_object_config(
+        json!({
+            "sorx_base_url": "https://sorx.example.test",
+            "auth": { "kind": "none" },
+            "timeout_ms": 30000,
+            "strict_tls": true
+        }),
+        answers.clone(),
+    )
+}
+
 fn fixture_for_reference(reference: &str) -> Option<ComponentFixture> {
     match reference {
         "repo://local/component-chat2data-llm" | "ai.greentic.component-chat2data-llm" => {
@@ -386,6 +398,21 @@ fn fixture_for_reference(reference: &str) -> Option<ComponentFixture> {
                 operations: &["handle_message"],
                 default_config: json!({}),
                 setup_config: passthrough,
+            })
+        }
+        "repo://local/component-sorx-business" | "ai.greentic.component-sorx-business" => {
+            Some(ComponentFixture {
+                id: "ai.greentic.component-sorx-business",
+                version: "0.1.0",
+                operations: &[
+                    "list_business_actions",
+                    "get_business_action_schema",
+                    "dry_run_locked_action",
+                    "invoke_locked_action",
+                    "explain_business_action_mapping",
+                ],
+                default_config: json!({}),
+                setup_config: sorx_business_setup,
             })
         }
         _ => None,

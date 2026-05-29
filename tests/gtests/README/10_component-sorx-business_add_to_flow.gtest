@@ -1,0 +1,46 @@
+#SET PACK_DIR=/tmp/test-pack/component-sorx-business
+#SET FLOW=${PACK_DIR}/flows/main.ygtc
+#SET FIXTURES=${WORK_DIR}/fixtures
+#SET DEFAULT_ANSWERS=${WORK_DIR}/default.answers.json
+#SET SETUP_ANSWERS=${WORK_DIR}/setup.answers.json
+#RUN rm -rf ${PACK_DIR}
+#RUN mkdir -p /tmp/test-pack
+#WRITE ${DEFAULT_ANSWERS} <<<EOF
+{}
+EOF
+#WRITE ${SETUP_ANSWERS} <<<EOF
+{
+  "sorx_base_url": "https://sorx.example.test",
+  "auth": {
+    "kind": "bearer_secret_ref",
+    "secret_ref": "SORX_TOKEN"
+  },
+  "timeout_ms": 15000,
+  "strict_tls": true
+}
+EOF
+#RUN greentic-pack new --dir ${PACK_DIR} ai.greentic.component-sorx-business-gtest
+#EXPECT_EXIT 0
+#RUN greentic-flow new --flow ${FLOW} --id ai.greentic.component-sorx-business.gtest --type messaging --name "component-sorx-business gtest" --description "Wizard add-step smoke test" --force
+#EXPECT_EXIT 0
+#RUN cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-sorx-business --out ${FIXTURES} --default-answers ${DEFAULT_ANSWERS} --setup-answers ${SETUP_ANSWERS}
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id sorx_business_default --component repo://local/component-sorx-business --resolver fixture://${FIXTURES} --wizard-mode default --routing-out
+#EXPECT_EXIT 0
+#RUN greentic-flow add-step --flow ${FLOW} --node-id sorx_business_personalized --component repo://local/component-sorx-business --resolver fixture://${FIXTURES} --wizard-mode setup --answers-file ${SETUP_ANSWERS} --routing-out --after sorx_business_default
+#EXPECT_EXIT 0
+#RUN grep -q 'sorx_business_default:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'sorx_business_personalized:' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'component: repo://local/component-sorx-business' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'sorx_base_url: https://sorx.example.test' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'secret_ref: SORX_TOKEN' ${FLOW}
+#EXPECT_EXIT 0
+#RUN grep -q 'timeout_ms: 15000' ${FLOW}
+#EXPECT_EXIT 0
+#SAVE_ARTIFACT ${DEFAULT_ANSWERS}
+#SAVE_ARTIFACT ${SETUP_ANSWERS}
+#SAVE_ARTIFACT ${FLOW}

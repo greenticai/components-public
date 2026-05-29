@@ -1,0 +1,9 @@
+{
+  "sorx_base_url": "https://sorx.example.test",
+  "auth": {
+    "kind": "bearer_secret_ref",
+    "secret_ref": "SORX_TOKEN"
+  },
+  "timeout_ms": 15000,
+  "strict_tls": true
+}

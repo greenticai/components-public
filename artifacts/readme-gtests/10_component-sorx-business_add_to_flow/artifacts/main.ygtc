@@ -1,0 +1,52 @@
+id: ai.greentic.component-sorx-business.gtest
+title: component-sorx-business gtest
+description: Wizard add-step smoke test
+type: messaging
+start: sorx_business_default
+parameters: {}
+tags: []
+schema_version: 2
+entrypoints: {}
+meta:
+  greentic:
+    bindings_hints:
+      sorx_business_default: []
+      sorx_business_personalized: []
+    components:
+      sorx_business_default:
+        abi_version: 0.6.0
+        added_at: 1780050989
+        component_id: repo://local/component-sorx-business
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1780050989
+      sorx_business_personalized:
+        abi_version: 0.6.0
+        added_at: 1780050989
+        component_id: repo://local/component-sorx-business
+        exported_ops_seen:
+        - describe
+        - invoke
+        updated_at: 1780050989
+    secrets_hints:
+      sorx_business_default: []
+      sorx_business_personalized: []
+nodes:
+  sorx_business_default:
+    routing:
+    - to: sorx_business_personalized
+    run:
+      component: repo://local/component-sorx-business
+      config: {}
+  sorx_business_personalized:
+    routing: out
+    run:
+      component: repo://local/component-sorx-business
+      config:
+        auth:
+          kind: bearer_secret_ref
+          secret_ref: SORX_TOKEN
+        sorx_base_url: https://sorx.example.test
+        strict_tls: true
+        timeout_ms: 15000
