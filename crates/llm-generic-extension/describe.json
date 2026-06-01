@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.llm-generic",
     "name": "LLM (generic)",
-    "version": "1.3.0",
+    "version": "1.2.1-research",
     "summary": "Generic LLM step node for Greentic flows",
     "description": "Ships the canonical generic `llm` nodeType — a fallback for prompt-driven AI steps that aren't pinned to a specific provider. Provider-specific extensions (greentic.llm-openai and friends) ship richer nodeTypes that implement the actual completion call; this generic node is a placeholder the planner can target when the provider is unknown or pluggable. Pure metadata extension: no WASM logic, only the descriptor + JSON Schema the designer needs to render the inspector form.",
     "author": {
@@ -52,7 +52,7 @@
           "file": "extension.wasm",
           "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
           "pack_id": "greentic.llm-generic",
-          "component_version": "1.3.0"
+          "component_version": "1.2.1-research"
         },
         "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "world": "greentic:llm-generic/extension@1.0.0"
