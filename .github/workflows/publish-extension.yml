@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      # gtdx >=1.2.4-research enforces HTTPS store URLs; the Greentic Store is
+      # not yet on TLS, so opt into the documented insecure-registry escape
+      # hatch (SDK #31). Mirrors the greentic-biz publish jobs.
+      GTDX_ALLOW_INSECURE_REGISTRY: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Derive version from tag
