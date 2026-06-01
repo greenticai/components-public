@@ -126,6 +126,8 @@ jobs:
             artifact: component_events2msg.wasm
           - name: component-msg2events
             artifact: component_msg2events.wasm
+          - name: component-sorx-business
+            artifact: component_sorx_business.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0

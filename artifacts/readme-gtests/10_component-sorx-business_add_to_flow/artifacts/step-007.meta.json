@@ -1,0 +1,7 @@
+{
+  "step": 7,
+  "line_no": 30,
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-sorx-business/flows/main.ygtc --node-id sorx_business_personalized --component repo://local/component-sorx-business --resolver fixture:///tmp/gtest-tUuXlO/fixtures --wizard-mode setup --answers-file /tmp/gtest-tUuXlO/setup.answers.json --routing-out --after sorx_business_default",
+  "exit_code": 0,
+  "duration_ms": 39
+}

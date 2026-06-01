@@ -15,20 +15,20 @@ meta:
     components:
       renderer_default:
         abi_version: 0.6.0
-        added_at: 1779901618
+        added_at: 1780050988
         component_id: repo://local/component-chat2data-renderer
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1779901618
+        updated_at: 1780050988
       renderer_personalized:
         abi_version: 0.6.0
-        added_at: 1779901618
+        added_at: 1780050988
         component_id: repo://local/component-chat2data-renderer
         exported_ops_seen:
         - describe
         - invoke
-        updated_at: 1779901618
+        updated_at: 1780050988
     secrets_hints:
       renderer_default: []
       renderer_personalized: []

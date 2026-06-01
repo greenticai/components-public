@@ -1,7 +1,7 @@
 {
   "step": 6,
   "line_no": 23,
-  "command": "greentic-flow add-step --flow /tmp/test-pack/component-chat2data-translator/flows/main.ygtc --node-id translator_default --component repo://local/component-chat2data-translator --resolver fixture:///tmp/gtest-Wy4teq/fixtures --wizard-mode default --routing-out",
+  "command": "greentic-flow add-step --flow /tmp/test-pack/component-chat2data-translator/flows/main.ygtc --node-id translator_default --component repo://local/component-chat2data-translator --resolver fixture:///tmp/gtest-JLvbKo/fixtures --wizard-mode default --routing-out",
   "exit_code": 0,
-  "duration_ms": 37
+  "duration_ms": 46
 }

@@ -1,7 +1,7 @@
 {
   "step": 5,
   "line_no": 21,
-  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-events2msg --out /tmp/gtest-IkaPJf/fixtures --default-answers /tmp/gtest-IkaPJf/default.answers.json --setup-answers /tmp/gtest-IkaPJf/setup.answers.json",
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-events2msg --out /tmp/gtest-KPgGSs/fixtures --default-answers /tmp/gtest-KPgGSs/default.answers.json --setup-answers /tmp/gtest-KPgGSs/setup.answers.json",
   "exit_code": 0,
-  "duration_ms": 135
+  "duration_ms": 192
 }

@@ -1,7 +1,7 @@
 {
   "step": 5,
   "line_no": 26,
-  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-http --out /tmp/gtest-RTcR79/fixtures --default-answers /tmp/gtest-RTcR79/default.answers.json --setup-answers /tmp/gtest-RTcR79/setup.answers.json",
+  "command": "cargo run --quiet -p gtest-fixture-exporter -- --reference repo://local/component-http --out /tmp/gtest-D72GJ4/fixtures --default-answers /tmp/gtest-D72GJ4/default.answers.json --setup-answers /tmp/gtest-D72GJ4/setup.answers.json",
   "exit_code": 0,
-  "duration_ms": 132
+  "duration_ms": 247
 }
