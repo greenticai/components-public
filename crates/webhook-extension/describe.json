@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.webhook",
     "name": "Webhook Trigger",
-    "version": "1.3.0",
+    "version": "1.2.1-research",
     "summary": "Generic inbound HTTP webhook trigger for Greentic flows",
     "description": "Ships the canonical webhook trigger nodeType plus three design-time tools (validate_webhook_config, suggest_path, infer_auth_from_curl). Webhook is operator-side ingress — the runtime exposes an HTTP listener, validates auth, and kicks off flow execution when a request matches the configured path. The tools help the designer LLM produce a valid trigger config from natural-language intent or a sample curl an upstream system would send.",
     "author": {
@@ -65,7 +65,7 @@
           "file": "extension.wasm",
           "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
           "pack_id": "greentic.webhook",
-          "component_version": "1.3.0"
+          "component_version": "1.2.1-research"
         },
         "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "world": "greentic:webhook-extension/extension@1.0.0"

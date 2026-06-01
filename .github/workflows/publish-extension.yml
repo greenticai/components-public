@@ -37,7 +37,7 @@ jobs:
         with:
           # Pre-release pin for the contract 1.2.x line — exact version
           # required so cargo accepts the `-research` prerelease suffix.
-          gtdx-version: "=1.2.1-research"
+          gtdx-version: "=1.2.5-research"
           manifest: crates/http-extension/Cargo.toml
           store-url: ${{ vars.GREENTIC_STORE_URL }}
           store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}
