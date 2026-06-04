@@ -2848,7 +2848,7 @@ Append to `crates/http-extension/README.md` (create if missing) a section:
 
 Required repo settings on `greenticai/components-public`:
 - Secret `GREENTIC_STORE_TOKEN` — `gts_*` long-lived API token from the `greentic` publisher
-- Variable `GREENTIC_STORE_URL` — e.g. `http://62.171.174.152:3030`
+- Variable `GREENTIC_STORE_URL` — e.g. `https://store.greentic.cloud`
 
 To publish a new version:
 1. Bump `version` in both `describe.json` and `Cargo.toml`
@@ -2935,7 +2935,7 @@ chmod +x ci/check_publisher_prefix.sh
 
 If you can reach the Store from the dev machine:
 ```bash
-GREENTIC_STORE_URL=http://62.171.174.152:3030 \
+GREENTIC_STORE_URL=https://store.greentic.cloud \
 GREENTIC_STORE_TOKEN=<your-token> \
 ci/check_publisher_prefix.sh greentic greentic.http
 ```

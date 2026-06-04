@@ -1,15 +1,15 @@
 [package]
-name = "http-extension"
-version = "1.2.1-research"
+name = "platform-extension"
+version = "1.2.2-research"
 edition = "2024"
 license = "MIT"
 authors = [
     "Greentic",
 ]
-build = "build.rs"
+description = "Greentic platform-bootstrap design extension. Ships the start nodeType — the only structural primitive the platform itself owns. Webhook trigger moved to greentic.webhook in 0.2.0; the generic LLM nodeType moved to greentic.llm-generic in 0.3.0."
 
 [package.metadata.component]
-package = "greentic:http"
+package = "greentic:platform"
 
 [package.metadata.component.target]
 path = "wit"
@@ -43,6 +43,3 @@ version = "1"
 features = [
     "derive",
 ]
-
-[dependencies.http-core]
-path = "../http-core"

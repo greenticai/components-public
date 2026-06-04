@@ -447,7 +447,7 @@ jobs:
     secrets:
       GREENTIC_STORE_TOKEN: ${{ secrets.GREENTIC_STORE_TOKEN }}
     env:
-      GREENTIC_STORE_URL: http://62.171.174.152:3030
+      GREENTIC_STORE_URL: https://store.greentic.cloud
 ```
 
 **Tag conventions** (no collision):
