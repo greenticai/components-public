@@ -9,7 +9,8 @@ Current scope is a single component crate (`component-pack2flow`) plus CI toolin
 - **Path:** `Cargo.toml` (workspace root)
 - **Role:** Workspace policy and shared dependency source of truth.
 - **Key functionality:**
-  - Declares members via `crates/*`.
+  - Declares members via `crates/*` (reusable WASM components) and
+    `extensions/*` (Greentic Designer design extensions).
   - Sets shared metadata including `rust-version = "1.91"`.
   - Stores Greentic dependency versions in root (`0.4` series).
   - Applies workspace lints (`unsafe_code = forbid`; clippy warnings).

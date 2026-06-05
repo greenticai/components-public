@@ -11,7 +11,6 @@
 # the cdylib.
 build:
 	cargo build --workspace \
-		--exclude llm-generic-extension \
 		--exclude http-extension \
 		--exclude webhook-extension \
 		--exclude platform-extension

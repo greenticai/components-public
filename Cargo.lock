@@ -34,9 +34,9 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "bitflags"
-version = "2.11.1"
+version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
+checksum = "84d7ced0ae9557296835c32bf1b1e02b44c746701f898460fb000d7eaa84f00a"
 
 [[package]]
 name = "blake3"
@@ -344,9 +344,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "greentic-interfaces-guest"
-version = "1.1.0-dev.26635436549"
+version = "1.1.0-dev.26865554792"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb5f4f805e6b419a87906b801fb05b8b79874e05c4a2a178c5bb4743ee4f468f"
+checksum = "f39abce854fcc911720db33aa5c25a7e9608c4ceb6a8f0f1fdfa4ee6bc5d8c19"
 dependencies = [
  "greentic-types",
  "wit-bindgen 0.57.1",
@@ -499,17 +499,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
-name = "llm-generic-extension"
-version = "1.2.1-research"
-dependencies = [
- "wit-bindgen-rt",
-]
-
-[[package]]
 name = "log"
-version = "0.4.30"
+version = "0.4.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "616ec5685824bcc94416c6d4a7a446eea774a31efd7062c8480ba6fd06d7a6e5"
+checksum = "113b30b4cd05f7c06868fdb2854f66a7b9fece9a48425351cd532e810d74024f"
 
 [[package]]
 name = "memchr"
@@ -534,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "platform-extension"
-version = "1.2.1-research"
+version = "1.2.2-research"
 dependencies = [
  "serde",
  "serde_json",
@@ -883,7 +876,7 @@ dependencies = [
 
 [[package]]
 name = "webhook-extension"
-version = "1.2.1-research"
+version = "1.2.2-research"
 dependencies = [
  "serde",
  "serde_json",

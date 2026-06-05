@@ -19,11 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      # gtdx >=1.2.4-research enforces HTTPS store URLs; the Greentic Store is
-      # not yet on TLS, so opt into the documented insecure-registry escape
-      # hatch (SDK #31). Mirrors the greentic-biz publish jobs.
-      GTDX_ALLOW_INSECURE_REGISTRY: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Derive version from tag
@@ -43,7 +38,7 @@ jobs:
           # Pre-release pin for the contract 1.2.x line — exact version
           # required so cargo accepts the `-research` prerelease suffix.
           gtdx-version: "=1.2.5-research"
-          manifest: crates/platform-extension/Cargo.toml
+          manifest: extensions/platform-extension/Cargo.toml
           store-url: ${{ vars.GREENTIC_STORE_URL }}
           store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}
           version: ${{ steps.ver.outputs.version }}

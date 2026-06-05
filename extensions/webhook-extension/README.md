@@ -15,8 +15,8 @@ Split out of `platform-extension` per [`docs/superpowers/specs/2026-05-06-webhoo
 ## Build
 
 ```bash
-bash crates/webhook-extension/build.sh
-ls -lh crates/webhook-extension/dist/
+bash extensions/webhook-extension/build.sh
+ls -lh extensions/webhook-extension/dist/
 ```
 
 ## Publish
