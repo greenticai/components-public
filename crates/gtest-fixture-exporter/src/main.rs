@@ -142,6 +142,7 @@ fn build_describe(fixture: &ComponentFixture) -> ComponentDescribe {
             })
             .collect(),
         config_schema,
+        outcomes: Vec::new(),
     }
 }
 
