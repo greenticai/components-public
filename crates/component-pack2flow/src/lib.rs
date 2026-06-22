@@ -10,7 +10,10 @@ use greentic_types::i18n_text::I18nText;
 #[cfg(target_arch = "wasm32")]
 use greentic_types::schemas::common::schema_ir::{AdditionalProperties, SchemaIr};
 #[cfg(target_arch = "wasm32")]
-use greentic_types::schemas::component::v0_6_0::{ComponentQaSpec, QaMode};
+use greentic_types::schemas::component::v0_6_0::{
+    ComponentDescribe, ComponentInfo, ComponentOperation, ComponentQaSpec, ComponentRunInput,
+    ComponentRunOutput, QaMode, schema_hash,
+};
 use serde_json::{Map, Value};
 
 const COMPONENT_NAME: &str = "component-pack2flow";
@@ -156,6 +159,92 @@ mod qa_exports {
     }
 
     export!(WizardSupport with_types_in self);
+}
+
+// The shared guest world only exports `node`/`component-qa`/`component-i18n`,
+// but every Greentic tool (packc resolve, runner, the designer's component
+// loader) instantiates a component and calls the separate
+// `greentic:component/component-descriptor@0.6.0#describe` instance to learn
+// its capabilities. Export it here, mirroring component-http, so this
+// component is conformant and the designer can ground its catalog from it.
+// Built from the same canonical schemas the node surface already exposes.
+#[cfg(target_arch = "wasm32")]
+mod descriptor_exports {
+    wit_bindgen::generate!({
+        inline: r#"
+            package greentic:component@0.6.0;
+
+            interface component-descriptor {
+              get-component-info: func() -> list<u8>;
+              describe: func() -> list<u8>;
+            }
+
+            world descriptor-support {
+              export component-descriptor;
+            }
+        "#,
+        world: "descriptor-support",
+    });
+
+    pub struct DescriptorSupport;
+
+    impl exports::greentic::component::component_descriptor::Guest for DescriptorSupport {
+        fn get_component_info() -> Vec<u8> {
+            crate::component_info_cbor()
+        }
+
+        fn describe() -> Vec<u8> {
+            crate::component_describe_cbor()
+        }
+    }
+
+    export!(DescriptorSupport with_types_in self);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_info() -> ComponentInfo {
+    ComponentInfo {
+        id: COMPONENT_ID.to_string(),
+        version: COMPONENT_VERSION.to_string(),
+        role: "tool".to_string(),
+        display_name: Some(I18nText::new("component.display_name", None)),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_info_cbor() -> Vec<u8> {
+    encode_cbor(&component_info())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_describe() -> ComponentDescribe {
+    let input = input_schema();
+    let output = output_schema();
+    let config = config_schema();
+    let op_schema_hash = schema_hash(&input, &output, &config).unwrap_or_default();
+
+    ComponentDescribe {
+        info: component_info(),
+        provided_capabilities: Vec::new(),
+        required_capabilities: Vec::new(),
+        metadata: BTreeMap::new(),
+        operations: vec![ComponentOperation {
+            id: DEFAULT_OPERATION.to_string(),
+            display_name: Some(I18nText::new("operation.handle_message", None)),
+            input: ComponentRunInput { schema: input },
+            output: ComponentRunOutput { schema: output },
+            defaults: BTreeMap::new(),
+            redactions: Vec::new(),
+            constraints: BTreeMap::new(),
+            schema_hash: op_schema_hash,
+        }],
+        config_schema: config,
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_describe_cbor() -> Vec<u8> {
+    encode_cbor(&component_describe())
 }
 
 #[cfg(target_arch = "wasm32")]

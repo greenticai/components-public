@@ -4,9 +4,22 @@
 
 use greentic_types::cbor::canonical;
 use greentic_types::i18n_text::I18nText as CanonicalI18nText;
+#[cfg(target_arch = "wasm32")]
+use greentic_types::schemas::component::v0_6_0::{
+    ComponentDescribe, ComponentInfo, ComponentOperation, ComponentRunInput, ComponentRunOutput,
+    schema_hash,
+};
 use greentic_types::schemas::component::v0_6_0::{
     ComponentQaSpec, QaMode as CanonicalQaMode, Question as CanonicalQuestion,
     QuestionKind as CanonicalQuestionKind,
+};
+// This crate defines its own local `SchemaIr` for the node surface, so the
+// describe payload uses the canonical greentic_types schema (aliased) as a
+// structural stub — mirroring component-http. Authoritative schemas remain on
+// the node/component-schema surface.
+#[cfg(target_arch = "wasm32")]
+use greentic_types::schemas::common::schema_ir::{
+    AdditionalProperties as CanonicalAdditionalProperties, SchemaIr as CanonicalSchemaIr,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -386,6 +399,103 @@ mod qa_exports {
     }
 
     export!(WizardSupport with_types_in self);
+}
+
+// The shared guest world only exports `node`/`component-qa`/`component-i18n`,
+// but every Greentic tool (packc resolve, runner, the designer's component
+// loader) instantiates a component and calls the separate
+// `greentic:component/component-descriptor@0.6.0#describe` instance to learn
+// its capabilities. Export it here, mirroring component-http, so this
+// component is conformant and the designer can ground its catalog from it.
+#[cfg(target_arch = "wasm32")]
+mod descriptor_exports {
+    wit_bindgen::generate!({
+        inline: r#"
+            package greentic:component@0.6.0;
+
+            interface component-descriptor {
+              get-component-info: func() -> list<u8>;
+              describe: func() -> list<u8>;
+            }
+
+            world descriptor-support {
+              export component-descriptor;
+            }
+        "#,
+        world: "descriptor-support",
+    });
+
+    pub struct DescriptorSupport;
+
+    impl exports::greentic::component::component_descriptor::Guest for DescriptorSupport {
+        fn get_component_info() -> Vec<u8> {
+            crate::component_info_cbor()
+        }
+
+        fn describe() -> Vec<u8> {
+            crate::component_describe_cbor()
+        }
+    }
+
+    export!(DescriptorSupport with_types_in self);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_info() -> ComponentInfo {
+    ComponentInfo {
+        id: COMPONENT_ID.to_string(),
+        version: COMPONENT_VERSION.to_string(),
+        role: "tool".to_string(),
+        display_name: Some(CanonicalI18nText::new("component.display_name", None)),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_info_cbor() -> Vec<u8> {
+    canonical_cbor_bytes(&component_info())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn empty_canonical_schema() -> CanonicalSchemaIr {
+    CanonicalSchemaIr::Object {
+        properties: BTreeMap::new(),
+        required: Vec::new(),
+        additional: CanonicalAdditionalProperties::Allow,
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_describe() -> ComponentDescribe {
+    let stub = empty_canonical_schema();
+    let op_schema_hash = schema_hash(&stub, &stub, &stub).unwrap_or_default();
+    let make_op = |id: &str| ComponentOperation {
+        id: id.to_string(),
+        display_name: Some(CanonicalI18nText::new(format!("operation.{id}"), None)),
+        input: ComponentRunInput {
+            schema: stub.clone(),
+        },
+        output: ComponentRunOutput {
+            schema: stub.clone(),
+        },
+        defaults: BTreeMap::new(),
+        redactions: Vec::new(),
+        constraints: BTreeMap::new(),
+        schema_hash: op_schema_hash.clone(),
+    };
+
+    ComponentDescribe {
+        info: component_info(),
+        provided_capabilities: Vec::new(),
+        required_capabilities: vec!["host:telemetry".to_string()],
+        metadata: BTreeMap::new(),
+        operations: vec![make_op("route"), make_op("extract"), make_op("validate")],
+        config_schema: stub,
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn component_describe_cbor() -> Vec<u8> {
+    canonical_cbor_bytes(&component_describe())
 }
 
 #[cfg(target_arch = "wasm32")]
