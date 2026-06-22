@@ -1,6 +1,6 @@
 [package]
 name = "component-msg2events"
-version.workspace = true
+version = "1.2.0-research"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
