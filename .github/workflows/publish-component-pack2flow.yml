@@ -1,0 +1,82 @@
+name: Publish Component pack2flow
+
+# Publishes ghcr.io/greenticai/component/component-pack2flow on `component-pack2flow-v*` tag pushes.
+# Mirrors publish-component-http.yml. Version published = tag with the leading
+# `component-pack2flow-v` stripped. Adds a describe-export gate before pushing so `stable`
+# can never again point at a build that predates component-descriptor@0.6.0.
+
+on:
+  push:
+    tags: ['component-pack2flow-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Component version (must match Cargo.toml)'
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#component-pack2flow-v}"
+          fi
+          echo "==> Publishing component-pack2flow@${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+
+      - name: Install cargo-component
+        run: cargo install cargo-component --version 0.21.1 --locked
+
+      - name: Install wasm-tools
+        run: cargo install wasm-tools --locked
+
+      - name: Build component
+        run: cargo component build -p component-pack2flow --release --target wasm32-wasip2 --locked
+
+      - name: Verify descriptor export (the gate that was missing)
+        run: |
+          set -euo pipefail
+          ARTIFACT="target/wasm32-wasip2/release/component_pack2flow.wasm"
+          test -f "$ARTIFACT"
+          wasm-tools component wit "$ARTIFACT" | grep -qi 'component-descriptor@0.6.0' \
+            || { echo "::error::$ARTIFACT does not export component-descriptor@0.6.0"; exit 1; }
+
+      - name: Setup oras
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push component to OCI
+        run: |
+          set -euo pipefail
+          ARTIFACT="target/wasm32-wasip2/release/component_pack2flow.wasm"
+          test -f "$ARTIFACT"
+          oras push \
+            "ghcr.io/greenticai/component/component-pack2flow:${{ steps.ver.outputs.version }}" \
+            "${ARTIFACT}:application/wasm"
+
+      - name: Verify push by pulling back
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/verify
+          oras pull "ghcr.io/greenticai/component/component-pack2flow:${{ steps.ver.outputs.version }}" -o /tmp/verify
+          WASM=$(find /tmp/verify -name component_pack2flow.wasm | head -1); test -n "$WASM" && test -f "$WASM"
