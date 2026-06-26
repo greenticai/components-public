@@ -1,0 +1,69 @@
+{
+  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "id": "ai.greentic.component-http",
+  "name": "component-http",
+  "version": "1.2.0",
+  "world": "greentic:component/component-v0-v6-v0@0.6.0",
+  "describe_export": "describe",
+  "operations": [
+    {
+      "name": "request",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "component-http request input",
+        "type": "object",
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "component-http request output",
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "stream",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "component-http stream input",
+        "type": "object",
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "component-http stream output",
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  ],
+  "default_operation": "request",
+  "config_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "supports": ["messaging"],
+  "profiles": { "default": "stateless", "supported": ["stateless"] },
+  "secret_requirements": [],
+  "capabilities": {
+    "wasi": {
+      "filesystem": { "mode": "none", "mounts": [] },
+      "random": true,
+      "clocks": true
+    },
+    "host": {
+      "http": { "client": true, "server": false },
+      "telemetry": { "scope": "node" },
+      "secrets": { "required": [] }
+    }
+  },
+  "limits": { "memory_mb": 128, "wall_time_ms": 30000 },
+  "artifacts": {
+    "component_wasm": "../../target/wasm32-wasip2/release/component_http.wasm"
+  },
+  "hashes": {
+    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}
