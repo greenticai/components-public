@@ -1,0 +1,76 @@
+name: Publish Component Extension (greentic.component-http)
+
+# Publishes component-http as a store ComponentExtension `greentic.component-http`
+# (a .gtxpack carrying the runtime component.wasm + the packc-owned component.json
+# sidecar), so packc can resolve `ext://greentic.component-http#component` (WS-D).
+#
+# This is DISTINCT from:
+#   * publish-component-http.yml  — pushes the raw wasm to OCI (ghcr), the current
+#     catalog source. Kept as a derived artifact during the transition.
+#   * publish-extension.yml       — publishes the greentic.http DESIGN extension
+#     (LLM tooling), a different id and artifact shape.
+#
+# Manual-only. `dry_run: true` (default) validates the describe-v2 mapping without
+# uploading; set `dry_run: false` to perform the irreversible store publish.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Component version (must match crates/component-http/Cargo.toml)'
+        required: true
+        default: '1.2.0'
+      dry_run:
+        description: 'Validate only (print describe-v2, no upload)'
+        type: boolean
+        required: true
+        default: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+
+      - name: Install cargo-component
+        run: cargo install cargo-component --version 0.21.1 --locked
+
+      - name: Build component-http wasm
+        run: cargo component build -p component-http --release --target wasm32-wasip2 --locked
+
+      # The producer (`greentic-component store publish`) emits describe.json +
+      # component.wasm + the component.json sidecar. Pinned to the research line
+      # that carries the sidecar (greentic-component #90).
+      - name: Install greentic-component (producer)
+        run: cargo install greentic-component --git https://github.com/greenticai/greentic-component --branch research --locked
+
+      - name: Validate describe-v2 mapping (dry-run)
+        run: |
+          set -euo pipefail
+          greentic-component store publish \
+            --manifest crates/component-http/component.manifest.json \
+            --wasm target/wasm32-wasip2/release/component_http.wasm \
+            --store-id greentic.component-http \
+            --summary "HTTP client runtime component (ext:// distribution)" \
+            --license Apache-2.0 \
+            --dry-run
+
+      - name: Publish to store
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          set -euo pipefail
+          greentic-component store publish \
+            --manifest crates/component-http/component.manifest.json \
+            --wasm target/wasm32-wasip2/release/component_http.wasm \
+            --store-id greentic.component-http \
+            --summary "HTTP client runtime component (ext:// distribution)" \
+            --license Apache-2.0 \
+            --store-url "${{ vars.GREENTIC_STORE_URL }}" \
+            --token "${{ secrets.GREENTIC_STORE_TOKEN }}"
