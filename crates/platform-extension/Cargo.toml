@@ -1,9 +1,11 @@
 [package]
 name = "platform-extension"
-version = "1.2.0"
+version = "1.1.0"
 edition = "2024"
 license = "MIT"
-authors = ["Greentic"]
+authors = [
+    "Greentic",
+]
 description = "Greentic platform-bootstrap design extension. Ships the start nodeType — the only structural primitive the platform itself owns. Webhook trigger moved to greentic.webhook in 0.2.0; the generic LLM nodeType moved to greentic.llm-generic in 0.3.0."
 
 [lib]
@@ -20,7 +22,11 @@ package = "greentic:platform"
 [package.metadata.component.target]
 path = "wit"
 
-[package.metadata.component.target.dependencies]
-"greentic:extension-base" = { path = "wit/deps/greentic/extension-base" }
-"greentic:extension-host" = { path = "wit/deps/greentic/extension-host" }
-"greentic:extension-design" = { path = "wit/deps/greentic/extension-design" }
+[package.metadata.component.target.dependencies."greentic:extension-base"]
+path = "wit/deps/greentic/extension-base"
+
+[package.metadata.component.target.dependencies."greentic:extension-host"]
+path = "wit/deps/greentic/extension-host"
+
+[package.metadata.component.target.dependencies."greentic:extension-design"]
+path = "wit/deps/greentic/extension-design"
