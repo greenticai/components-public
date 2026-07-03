@@ -1,0 +1,24 @@
+{
+  "extension.name": "Event Triggers",
+  "extension.description": "Timer, SMS (Twilio), and email (SendGrid) event providers as flow trigger nodes.",
+  "extension.summary": "Design-time node descriptors for event-based triggers; runtime execution delegated to the events-* packs.",
+
+  "node.timer-trigger.label": "Timer / Schedule",
+  "node.timer-trigger.description": "Fire a flow after a configurable delay.",
+  "node.timer-trigger.config.enabled": "Enabled (activate the timer source)",
+  "node.timer-trigger.config.timezone": "Timezone (IANA, default UTC)",
+  "node.timer-trigger.config.default_delay_seconds": "Default delay in seconds before the timer fires (default 30)",
+  "node.timer-trigger.config.persistence_key_prefix": "Override prefix for persisted scheduled entries",
+
+  "node.sms-trigger.label": "SMS (Twilio)",
+  "node.sms-trigger.description": "Start a flow when an inbound SMS is received via Twilio.",
+  "node.sms-trigger.config.messaging_provider_id": "Messaging provider ID (routes credentials and persistence keys)",
+  "node.sms-trigger.config.from": "Default sender number for outbound SMS",
+  "node.sms-trigger.config.persistence_key_prefix": "Override prefix for persisted inbound requests",
+
+  "node.email-trigger.label": "Email (SendGrid)",
+  "node.email-trigger.description": "Start a flow when an inbound email is received via SendGrid inbound parse.",
+  "node.email-trigger.config.messaging_provider_id": "Messaging provider ID (routes credentials and persistence keys)",
+  "node.email-trigger.config.from": "Optional default From address for outbound integrations",
+  "node.email-trigger.config.persistence_key_prefix": "Override prefix for persisted inbound requests"
+}

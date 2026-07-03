@@ -21,6 +21,7 @@ serde_json = "1"
 thiserror = "2"
 tracing = "0.1"
 greentic-types = ">=1.1.0-dev, <1.2.0-0"
+greentic-extension-sdk-contract = "1.2.3-research"
 
 [workspace.dependencies.serde]
 version = "1"
