@@ -1,6 +1,68 @@
 # events-triggers-ext
 
-Greentic design extension that ships `nodeType` descriptors for event-based trigger nodes (timer, SMS, email) so they appear as first-class trigger primitives in the Greentic Designer palette.
+A Greentic Designer **design** extension that ships `nodeType` descriptors for three event-based trigger primitives — timer/schedule, SMS (Twilio), and email (SendGrid) — so they appear as first-class trigger nodes in the Greentic Designer palette.
+
+- **id:** `greentic.events-triggers`
+- **version:** `0.1.0-research`
+- **kind:** DesignExtension (nodeTypes-only; no embedded WASM tools)
+
+## What it does
+
+This extension carries no runtime logic of its own. It provides the **designer-side descriptor** (JSON Schema, icon, category, color) that the Designer needs to render the inspector forms for each trigger node. At runtime, execution is fully delegated to the corresponding `events-*` packs:
+
+| Node type | Runtime pack |
+|---|---|
+| `timer-trigger` | `events-timer` (OCI: `ghcr.io/greenticai/packs/events/events-timer:stable`) |
+| `sms-trigger` | `events-sms-twilio` (OCI: `ghcr.io/greenticai/packs/events/events-sms-twilio:stable`) |
+| `email-trigger` | `events-email-sendgrid` (OCI: `ghcr.io/greenticai/packs/events/events-email-sendgrid:stable`) |
+
+## Trigger nodes
+
+### Timer / Schedule (`timer-trigger`)
+
+Fires a flow on a cron expression or a fixed interval string (e.g. `"30m"`).
+
+| Config field | Required | Description |
+|---|---|---|
+| `schedule` | Yes | Cron expression (`"0 9 * * 1-5"`) or interval (`"15m"`) |
+| `timezone` | No | IANA timezone for cron evaluation (default: `UTC`) |
+
+Output port: **Triggered**
+
+### SMS — Twilio (`sms-trigger`)
+
+Starts a flow when an inbound SMS is received via Twilio. Credentials are stored as operator secrets and referenced by name.
+
+| Config field | Required | Description |
+|---|---|---|
+| `from_number` | Yes | Sender phone number in E.164 format (must belong to the Twilio account) |
+| `account_sid` | Yes | Secret name holding the Twilio Account SID |
+| `auth_token` | Yes | Secret name holding the Twilio Auth Token |
+
+Output port: **Received**
+
+### Email — SendGrid (`email-trigger`)
+
+Starts a flow when an inbound email is received via the SendGrid Inbound Parse webhook.
+
+| Config field | Required | Description |
+|---|---|---|
+| `from_address` | Yes | Verified sender address (e.g. `noreply@acme.com`) |
+| `api_key` | Yes | Secret name holding the SendGrid API key |
+
+Output port: **Received**
+
+## Installation
+
+**Via the Greentic Store (recommended):**
+
+```bash
+gtdx install greentic.events-triggers
+```
+
+**Bundled in a pack:** include `greentic.events-triggers` in your `bundle.yaml` `extensions` list.
+
+The extension is automatically available in the Designer palette after installation. The corresponding `events-*` runtime packs must also be installed (or bundled) for flows to execute.
 
 ## Building
 
@@ -13,6 +75,22 @@ Or using the convenience script (requires `describe.json` and `jq`):
 ```bash
 ./build.sh
 ```
+
+## Publish
+
+Store publish via CI:
+1. Bump `version` in `describe.json` and `Cargo.toml`
+2. Commit + push to main
+3. Tag: `git tag events-triggers-ext-v<version> && git push origin events-triggers-ext-v<version>`
+4. The `publish-events-triggers-ext` workflow posts the `.gtxpack` to the Store
+
+## Layout
+
+- `describe.json` — extension manifest with the three `nodeType` entries + inline JSON Schemas
+- `src/lib.rs` — WASM guest exports (no-op stubs; no tools in v0.1)
+- `wit/` — WIT contract
+- `i18n/en.json` — English locale strings for node labels, descriptions, and config field names
+- `assets/icon.svg` — placeholder trigger glyph (shared across all three nodes in v0.1)
 
 ## Extension metadata
 

@@ -1,0 +1,21 @@
+{
+  "extension.name": "Event Triggers",
+  "extension.description": "Timer, SMS (Twilio), and email (SendGrid) event providers as flow trigger nodes.",
+  "extension.summary": "Design-time node descriptors for event-based triggers; runtime execution delegated to the events-* packs.",
+
+  "node.timer-trigger.label": "Timer / Schedule",
+  "node.timer-trigger.description": "Fire a flow on a cron schedule or fixed interval.",
+  "node.timer-trigger.config.schedule": "Schedule (cron or interval)",
+  "node.timer-trigger.config.timezone": "Timezone (IANA, default UTC)",
+
+  "node.sms-trigger.label": "SMS (Twilio)",
+  "node.sms-trigger.description": "Start a flow when an inbound SMS is received via Twilio.",
+  "node.sms-trigger.config.from_number": "Sender phone number (E.164)",
+  "node.sms-trigger.config.account_sid": "Twilio Account SID (secret ref)",
+  "node.sms-trigger.config.auth_token": "Twilio Auth Token (secret ref)",
+
+  "node.email-trigger.label": "Email (SendGrid)",
+  "node.email-trigger.description": "Start a flow when an inbound email is received via SendGrid inbound parse.",
+  "node.email-trigger.config.from_address": "Verified sender address",
+  "node.email-trigger.config.api_key": "SendGrid API key (secret ref)"
+}
