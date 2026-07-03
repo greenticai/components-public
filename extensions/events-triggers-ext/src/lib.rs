@@ -105,4 +105,5 @@ impl knowledge::Guest for Component {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 bindings::export!(Component with_types_in bindings);

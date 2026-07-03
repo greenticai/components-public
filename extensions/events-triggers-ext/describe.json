@@ -1,0 +1,87 @@
+{
+  "apiVersion": "greentic.ai/v2",
+  "kind": "DesignExtension",
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "metadata": {
+    "id": "greentic.events-triggers",
+    "name": "Event Triggers",
+    "version": "0.1.0-research",
+    "summary": "Timer, SMS, and email event providers as flow trigger nodes",
+    "author": { "name": "Greentic" },
+    "license": "MIT"
+  },
+  "engine": {
+    "greenticDesigner": ">=1.2.0",
+    "extRuntime": "^0.12.0"
+  },
+  "capabilities": {
+    "offered": [],
+    "required": []
+  },
+  "runtime": {
+    "memoryLimitMB": 64,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "events-timer": {
+        "oci_ref": "oci://ghcr.io/greenticai/packs/events/events-timer:stable",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "TBD-task6"
+      },
+      "events-sms-twilio": {
+        "oci_ref": "oci://ghcr.io/greenticai/packs/events/events-sms-twilio:stable",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "TBD-task6"
+      },
+      "events-email-sendgrid": {
+        "oci_ref": "oci://ghcr.io/greenticai/packs/events/events-email-sendgrid:stable",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "TBD-task6"
+      }
+    }
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "timer-trigger",
+        "label": "Timer / Schedule",
+        "category": "trigger",
+        "icon": "clock",
+        "color": "#0ea5e9",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\"}",
+        "output_ports": [{ "name": "default", "label": "Triggered" }],
+        "runtime_ref": "events-timer"
+      },
+      {
+        "type_id": "sms-trigger",
+        "label": "SMS (Twilio)",
+        "category": "trigger",
+        "icon": "message-square",
+        "color": "#0ea5e9",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\"}",
+        "output_ports": [{ "name": "default", "label": "Received" }],
+        "runtime_ref": "events-sms-twilio"
+      },
+      {
+        "type_id": "email-trigger",
+        "label": "Email (SendGrid)",
+        "category": "trigger",
+        "icon": "mail",
+        "color": "#0ea5e9",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\"}",
+        "output_ports": [{ "name": "default", "label": "Received" }],
+        "runtime_ref": "events-email-sendgrid"
+      }
+    ]
+  }
+}
