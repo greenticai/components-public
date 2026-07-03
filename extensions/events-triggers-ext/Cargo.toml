@@ -1,0 +1,36 @@
+[package]
+name = "events-triggers-ext"
+version = "0.1.0-research"
+edition = "2024"
+license = "MIT"
+authors = ["Greentic"]
+description = "Greentic events-triggers design extension. Ships nodeType descriptors for timer, SMS, and email event trigger nodes."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde_json = "1"
+
+[dependencies.wit-bindgen-rt]
+version = "0.35"
+features = ["bitflags"]
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[package.metadata.component]
+package = "greentic:events-triggers"
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies."greentic:extension-base"]
+path = "wit/deps/greentic/extension-base"
+
+[package.metadata.component.target.dependencies."greentic:extension-host"]
+path = "wit/deps/greentic/extension-host"
+
+[package.metadata.component.target.dependencies."greentic:extension-design"]
+path = "wit/deps/greentic/extension-design"
