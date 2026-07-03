@@ -157,3 +157,24 @@ This is the single load-bearing risk and is resolved by inspection before implem
    pack's manifest during the plan.
 4. **`components-public` CLAUDE.md / signing** — confirm describe-signing + CI expectations before the
    first commit (mirror webhook-extension's `build.sh` + `ci/local_check.sh`).
+
+---
+
+## Runtime execution model (Task 6 update — source-of-truth alignment)
+
+This extension is **design-time only**: it surfaces the three trigger nodes and their typed config schemas in the Designer palette. It does NOT execute events. **Execution requires the operator to install or bundle the matching `events-*` provider packs** (`ghcr.io/greenticai/packs/events/events-{timer,sms-twilio,email-sendgrid}`) into the deployment (`bundle.yaml` `extension_providers` → `greentic-bundle` → `providers/*.gtpack`). `greentic-start` discovers providers from `<bundle>/providers/*.gtpack` by domain and fires them by `provider` name — NOT via this extension's `runtime_ref`. The `runtime_ref → RuntimeComponent.oci_ref` only pins a component into the flow pack's resolve sidecar; how it maps to `pack + component_ref` is defined by consumer crates (`greentic-events` / `greentic-deployer` / `greentic-pack`) and is an unverified follow-up. **SMS and email credentials are NOT in the trigger config** — they are delegated to a separate messaging provider named by `messaging_provider_id`.
+
+### Config schema corrections (Task 6)
+
+Investigation of the real pack sources revealed the prior schemas were hand-authored and incorrect. The corrected schemas are:
+
+| Trigger | Required field(s) | Notes |
+|---|---|---|
+| `timer-trigger` | `enabled` (boolean) | Delay-based, not cron. Optional: `timezone`, `default_delay_seconds`, `persistence_key_prefix`. |
+| `sms-trigger` | `messaging_provider_id` (string) | No Twilio SID/token here — delegated. Optional: `from`, `persistence_key_prefix`. |
+| `email-trigger` | `messaging_provider_id` (string) | No SendGrid API key here — delegated. Optional: `from`, `persistence_key_prefix`. |
+
+### Runtime component binding corrections (Task 6)
+
+- `world`: `greentic:provider/schema-core@1.0.0` (was placeholder `TBD-task6`)
+- `sha256` digests updated to resolved pack digests (see `describe.json` `runtime.components`).

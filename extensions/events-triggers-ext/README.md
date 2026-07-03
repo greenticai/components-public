@@ -246,3 +246,26 @@ Rust source: `describe/contributions/node_type.rs:14`
 ```
 
 The slot name (`"events-triggers"`) is the value used in `NodeType.runtime_ref`.
+
+---
+
+## Runtime execution model
+
+This extension is **design-time only**: it surfaces the three trigger nodes (timer, SMS, email) and their typed config schemas in the Designer palette. It does NOT execute events.
+
+**Execution requires the operator to install or bundle the matching `events-*` provider packs** into the deployment. Specifically, add these to `bundle.yaml` under `extension_providers`:
+
+```
+ghcr.io/greenticai/packs/events/events-timer:stable
+ghcr.io/greenticai/packs/events/events-sms-twilio:stable
+ghcr.io/greenticai/packs/events/events-email-sendgrid:stable
+```
+
+`greentic-bundle` materialises them as `providers/*.gtpack` files. `greentic-start` discovers providers from `<bundle>/providers/*.gtpack` by domain and fires them by `provider` name — NOT via this extension's `runtime_ref`. The `runtime_ref` in `describe.json` pins a component into the flow pack's resolve sidecar; how it maps to `pack + component_ref` at execution time is defined by consumer crates (`greentic-events` / `greentic-deployer` / `greentic-pack`) and is an unverified follow-up.
+
+The pack's canonical binding is `greentic.provider-extension.v1` → `component_ref` (`events-provider-{timer,sms-twilio,email-sendgrid}`) + `export: schema-core`, world `greentic:provider/schema-core@1.0.0`.
+
+**Known limitations:**
+
+- The `events-timer` / `events-sms` / `events-email` demo packs use STUB sources. The genuinely runnable provider components are in `events-webhook`, `events-sms-twilio`, `events-email-sendgrid`, and `events-dummy`.
+- SMS and email credentials are **not** stored in the trigger config. They are delegated to a separate messaging provider identified by `messaging_provider_id`. The trigger node config carries only the provider ID (and optional overrides such as `from` and `persistence_key_prefix`); the actual Twilio/SendGrid credentials are held by the operator's messaging provider configuration.

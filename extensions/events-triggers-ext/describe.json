@@ -32,18 +32,18 @@
     "components": {
       "events-timer": {
         "oci_ref": "oci://ghcr.io/greenticai/packs/events/events-timer:stable",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "world": "TBD-task6"
+        "sha256": "a4f0177c14eec675d1bd81ac4c3c95e15c161ced7e030ab06efaa32fed7110ec",
+        "world": "greentic:provider/schema-core@1.0.0"
       },
       "events-sms-twilio": {
         "oci_ref": "oci://ghcr.io/greenticai/packs/events/events-sms-twilio:stable",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "world": "TBD-task6"
+        "sha256": "8aafa2ff9653aaed363578805a6afb8232c5f2d6d0dcc35e1edf0691ebd077fb",
+        "world": "greentic:provider/schema-core@1.0.0"
       },
       "events-email-sendgrid": {
         "oci_ref": "oci://ghcr.io/greenticai/packs/events/events-email-sendgrid:stable",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "world": "TBD-task6"
+        "sha256": "4b9236a4c13ae735514a8cc034da6adef53af77e63a6dec5b87ca2eaeb5e8fd1",
+        "world": "greentic:provider/schema-core@1.0.0"
       }
     }
   },
@@ -56,7 +56,7 @@
         "icon": "clock",
         "color": "#0ea5e9",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\",\"required\":[\"schedule\"],\"properties\":{\"schedule\":{\"type\":\"string\",\"description\":\"Cron expression or interval (e.g. \\\"0 9 * * *\\\" or \\\"30m\\\")\",\"examples\":[\"0 9 * * 1-5\",\"15m\"]},\"timezone\":{\"type\":\"string\",\"description\":\"IANA timezone for cron evaluation (default UTC)\",\"examples\":[\"Europe/London\",\"Asia/Jakarta\"]}}}",
+        "config_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"title\":\"Timer provider config\",\"type\":\"object\",\"required\":[\"enabled\"],\"properties\":{\"enabled\":{\"type\":\"boolean\",\"description\":\"Whether the timer source is active\"},\"timezone\":{\"type\":\"string\",\"description\":\"IANA timezone for evaluation (default UTC)\"},\"default_delay_seconds\":{\"type\":\"number\",\"description\":\"Default delay in seconds before the timer fires (default 30)\"},\"persistence_key_prefix\":{\"type\":\"string\",\"description\":\"Override prefix for persisted scheduled entries\"}},\"additionalProperties\":false}",
         "output_ports": [{ "name": "default", "label": "Triggered" }],
         "runtime_ref": "events-timer"
       },
@@ -67,7 +67,7 @@
         "icon": "message-square",
         "color": "#0ea5e9",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\",\"required\":[\"from_number\",\"account_sid\",\"auth_token\"],\"properties\":{\"from_number\":{\"type\":\"string\",\"description\":\"Sender phone number in E.164 format (must belong to the Twilio account)\",\"examples\":[\"+14155551234\"]},\"account_sid\":{\"type\":\"string\",\"description\":\"Secret name holding the Twilio Account SID (secret_ref)\"},\"auth_token\":{\"type\":\"string\",\"description\":\"Secret name holding the Twilio Auth Token (secret_ref)\"}}}",
+        "config_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"title\":\"events.sms.twilio provider config\",\"type\":\"object\",\"required\":[\"messaging_provider_id\"],\"properties\":{\"messaging_provider_id\":{\"type\":\"string\",\"minLength\":1,\"description\":\"Stable provider id used for routing and persistence keys.\"},\"from\":{\"type\":\"string\",\"description\":\"Default sender number for outbound SMS.\"},\"persistence_key_prefix\":{\"type\":\"string\",\"description\":\"Override prefix for persisted inbound requests.\"}},\"additionalProperties\":false}",
         "output_ports": [{ "name": "default", "label": "Received" }],
         "runtime_ref": "events-sms-twilio"
       },
@@ -78,7 +78,7 @@
         "icon": "mail",
         "color": "#0ea5e9",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\",\"required\":[\"from_address\",\"api_key\"],\"properties\":{\"from_address\":{\"type\":\"string\",\"description\":\"Verified sender address\",\"examples\":[\"noreply@acme.com\"]},\"api_key\":{\"type\":\"string\",\"description\":\"Secret name holding the SendGrid API key (secret_ref)\"}}}",
+        "config_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"title\":\"events.email.sendgrid provider config\",\"type\":\"object\",\"required\":[\"messaging_provider_id\"],\"properties\":{\"messaging_provider_id\":{\"type\":\"string\",\"minLength\":1,\"description\":\"Stable provider id used for routing and persistence keys.\"},\"from\":{\"type\":\"string\",\"description\":\"Optional default From address for outbound integrations.\"},\"persistence_key_prefix\":{\"type\":\"string\",\"description\":\"Override prefix for persisted inbound requests.\"}},\"additionalProperties\":false}",
         "output_ports": [{ "name": "default", "label": "Received" }],
         "runtime_ref": "events-email-sendgrid"
       }

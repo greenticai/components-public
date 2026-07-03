@@ -4,18 +4,21 @@
   "extension.summary": "Design-time node descriptors for event-based triggers; runtime execution delegated to the events-* packs.",
 
   "node.timer-trigger.label": "Timer / Schedule",
-  "node.timer-trigger.description": "Fire a flow on a cron schedule or fixed interval.",
-  "node.timer-trigger.config.schedule": "Schedule (cron or interval)",
+  "node.timer-trigger.description": "Fire a flow after a configurable delay.",
+  "node.timer-trigger.config.enabled": "Enabled (activate the timer source)",
   "node.timer-trigger.config.timezone": "Timezone (IANA, default UTC)",
+  "node.timer-trigger.config.default_delay_seconds": "Default delay in seconds before the timer fires (default 30)",
+  "node.timer-trigger.config.persistence_key_prefix": "Override prefix for persisted scheduled entries",
 
   "node.sms-trigger.label": "SMS (Twilio)",
   "node.sms-trigger.description": "Start a flow when an inbound SMS is received via Twilio.",
-  "node.sms-trigger.config.from_number": "Sender phone number (E.164)",
-  "node.sms-trigger.config.account_sid": "Twilio Account SID (secret ref)",
-  "node.sms-trigger.config.auth_token": "Twilio Auth Token (secret ref)",
+  "node.sms-trigger.config.messaging_provider_id": "Messaging provider ID (routes credentials and persistence keys)",
+  "node.sms-trigger.config.from": "Default sender number for outbound SMS",
+  "node.sms-trigger.config.persistence_key_prefix": "Override prefix for persisted inbound requests",
 
   "node.email-trigger.label": "Email (SendGrid)",
   "node.email-trigger.description": "Start a flow when an inbound email is received via SendGrid inbound parse.",
-  "node.email-trigger.config.from_address": "Verified sender address",
-  "node.email-trigger.config.api_key": "SendGrid API key (secret ref)"
+  "node.email-trigger.config.messaging_provider_id": "Messaging provider ID (routes credentials and persistence keys)",
+  "node.email-trigger.config.from": "Optional default From address for outbound integrations",
+  "node.email-trigger.config.persistence_key_prefix": "Override prefix for persisted inbound requests"
 }
