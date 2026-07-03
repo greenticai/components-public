@@ -89,15 +89,17 @@ Store publish via CI:
 1. Bump `version` in `describe.json` and `Cargo.toml`
 2. Commit + push to main
 3. Tag: `git tag events-triggers-ext-v<version> && git push origin events-triggers-ext-v<version>`
-4. The `publish-events-triggers-ext` workflow posts the `.gtxpack` to the Store
+4. The `.github/workflows/publish-events-triggers-ext.yml` workflow triggers on the `events-triggers-ext-v*` tag and posts the `.gtxpack` to the Store
 
 ## Layout
 
 - `describe.json` — extension manifest with the three `nodeType` entries + inline JSON Schemas
 - `src/lib.rs` — WASM guest exports (no-op stubs; no tools in v0.1)
 - `wit/` — WIT contract
-- `i18n/en.json` — English locale strings for node labels, descriptions, and config field names
-- `assets/icon.svg` — placeholder trigger glyph (shared across all three nodes in v0.1)
+- `i18n/en.json` — English locale strings (source-only; **not** packed into the `.gtxpack`; node labels live inline in `describe.json`)
+- `assets/icon.svg` — placeholder trigger glyph (source-only; **not** packed into the `.gtxpack`; the icon field in each nodeType references this by name)
+
+**Shipped in `.gtxpack`:** only `extension.wasm` + `describe.json` (see `build.sh`).
 
 ## Extension metadata
 
