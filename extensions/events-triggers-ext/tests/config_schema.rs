@@ -37,4 +37,8 @@ fn email_requires_messaging_provider_id() {
     let s = schema_for("email-trigger");
     let req = required(&s);
     assert!(req.contains(&"messaging_provider_id".to_string()));
+    // Credentials are delegated to the messaging provider — no secret fields here
+    assert!(s["properties"]["messaging_provider_id"].is_object());
+    assert!(s["properties"]["from"].is_object());
+    assert!(s["properties"]["persistence_key_prefix"].is_object());
 }

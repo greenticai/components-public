@@ -18,37 +18,44 @@ This extension carries no runtime logic of its own. It provides the **designer-s
 
 ## Trigger nodes
 
-### Timer / Schedule (`timer-trigger`)
+### Timer (`timer-trigger`)
 
-Fires a flow on a cron expression or a fixed interval string (e.g. `"30m"`).
+Fires a flow after a configurable delay. This is a delay-based timer, not a cron scheduler.
 
-| Config field | Required | Description |
-|---|---|---|
-| `schedule` | Yes | Cron expression (`"0 9 * * 1-5"`) or interval (`"15m"`) |
-| `timezone` | No | IANA timezone for cron evaluation (default: `UTC`) |
+| Config field | Required | Type | Description |
+|---|---|---|---|
+| `enabled` | **Yes** | boolean | Whether the timer source is active |
+| `timezone` | No | string | IANA timezone (default: `UTC`) |
+| `default_delay_seconds` | No | number | Delay in seconds before firing (default: `30`) |
+| `persistence_key_prefix` | No | string | Override prefix for persisted scheduled entries |
 
 Output port: **Triggered**
 
-### SMS — Twilio (`sms-trigger`)
+### SMS — Twilio (`sms-trigger`) — `events.sms.twilio`
 
-Starts a flow when an inbound SMS is received via Twilio. Credentials are stored as operator secrets and referenced by name.
+Starts a flow when an inbound SMS is received via a Twilio-backed messaging provider.
 
-| Config field | Required | Description |
-|---|---|---|
-| `from_number` | Yes | Sender phone number in E.164 format (must belong to the Twilio account) |
-| `account_sid` | Yes | Secret name holding the Twilio Account SID |
-| `auth_token` | Yes | Secret name holding the Twilio Auth Token |
+> **Note:** Twilio credentials (Account SID, Auth Token) are **not** configured here. They are held by the messaging provider referenced by `messaging_provider_id`. The trigger node only carries the provider reference and optional overrides.
+
+| Config field | Required | Type | Description |
+|---|---|---|---|
+| `messaging_provider_id` | **Yes** | string | Stable provider id used for routing and persistence keys |
+| `from` | No | string | Default sender number for outbound SMS |
+| `persistence_key_prefix` | No | string | Override prefix for persisted inbound requests |
 
 Output port: **Received**
 
-### Email — SendGrid (`email-trigger`)
+### Email — SendGrid (`email-trigger`) — `events.email.sendgrid`
 
 Starts a flow when an inbound email is received via the SendGrid Inbound Parse webhook.
 
-| Config field | Required | Description |
-|---|---|---|
-| `from_address` | Yes | Verified sender address (e.g. `noreply@acme.com`) |
-| `api_key` | Yes | Secret name holding the SendGrid API key |
+> **Note:** The SendGrid API key is **not** configured here. It is held by the messaging provider referenced by `messaging_provider_id`. The trigger node only carries the provider reference and optional overrides.
+
+| Config field | Required | Type | Description |
+|---|---|---|---|
+| `messaging_provider_id` | **Yes** | string | Stable provider id used for routing and persistence keys |
+| `from` | No | string | Default From address for outbound integrations |
+| `persistence_key_prefix` | No | string | Override prefix for persisted inbound requests |
 
 Output port: **Received**
 
