@@ -56,7 +56,7 @@
         "icon": "clock",
         "color": "#0ea5e9",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\"}",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"schedule\"],\"properties\":{\"schedule\":{\"type\":\"string\",\"description\":\"Cron expression or interval (e.g. \\\"0 9 * * *\\\" or \\\"30m\\\")\",\"examples\":[\"0 9 * * 1-5\",\"15m\"]},\"timezone\":{\"type\":\"string\",\"description\":\"IANA timezone for cron evaluation (default UTC)\",\"examples\":[\"Europe/London\",\"Asia/Jakarta\"]}}}",
         "output_ports": [{ "name": "default", "label": "Triggered" }],
         "runtime_ref": "events-timer"
       },
@@ -67,7 +67,7 @@
         "icon": "message-square",
         "color": "#0ea5e9",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\"}",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"from_number\",\"account_sid\",\"auth_token\"],\"properties\":{\"from_number\":{\"type\":\"string\",\"description\":\"Sender phone number in E.164 format (must belong to the Twilio account)\",\"examples\":[\"+14155551234\"]},\"account_sid\":{\"type\":\"string\",\"description\":\"Secret name holding the Twilio Account SID (secret_ref)\"},\"auth_token\":{\"type\":\"string\",\"description\":\"Secret name holding the Twilio Auth Token (secret_ref)\"}}}",
         "output_ports": [{ "name": "default", "label": "Received" }],
         "runtime_ref": "events-sms-twilio"
       },
@@ -78,7 +78,7 @@
         "icon": "mail",
         "color": "#0ea5e9",
         "complexity": "simple",
-        "config_schema": "{\"type\":\"object\"}",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"from_address\",\"api_key\"],\"properties\":{\"from_address\":{\"type\":\"string\",\"description\":\"Verified sender address\",\"examples\":[\"noreply@acme.com\"]},\"api_key\":{\"type\":\"string\",\"description\":\"Secret name holding the SendGrid API key (secret_ref)\"}}}",
         "output_ports": [{ "name": "default", "label": "Received" }],
         "runtime_ref": "events-email-sendgrid"
       }
