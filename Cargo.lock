@@ -441,7 +441,7 @@ dependencies = [
 
 [[package]]
 name = "http-extension"
-version = "1.2.0-dev.0"
+version = "1.1.0"
 dependencies = [
  "http-core",
  "serde",
@@ -536,7 +536,7 @@ dependencies = [
 
 [[package]]
 name = "platform-extension"
-version = "1.2.0-dev.0"
+version = "1.1.0"
 dependencies = [
  "serde",
  "serde_json",
