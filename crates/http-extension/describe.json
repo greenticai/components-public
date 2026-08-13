@@ -5,7 +5,7 @@
   "metadata": {
     "id": "greentic.http",
     "name": "HTTP Client",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "summary": "Generate and validate HTTP call nodes for Greentic flows",
     "description": "Teaches the Designer LLM to generate YGTc HTTP nodes from natural language, curl commands, or card submit contexts. Wraps component-http runtime \u2014 does not make HTTP calls itself.",
     "author": {
@@ -100,23 +100,48 @@
     "tools": [
       {
         "name": "generate_http_node",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Generate a YGTc HTTP node from natural language intent. Detects the HTTP method, path, base URL and auth type from the intent text and emits a node stanza wired to the component-http runtime, with a rationale explaining the choices.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"intent\":{\"type\":\"string\",\"description\":\"Natural-language description of the HTTP call, e.g. \\\"POST to CRM /api/leads with JSON body, bearer auth\\\". The method is taken from a POST/PUT/PATCH/DELETE/GET keyword (default GET), the path from the first /-prefixed token, the base URL from the first http(s):// token, and the auth type from the words \\\"bearer\\\", \\\"api key\\\"/\\\"api-key\\\" or \\\"basic auth\\\" (default none).\"},\"context\":{\"type\":\"object\",\"description\":\"Optional generation hints.\",\"properties\":{\"base_url_hint\":{\"type\":\"string\",\"description\":\"Base URL to use instead of one detected in the intent.\"},\"secret_names\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Secret names available to the flow. When auth is required the first name containing HTTP, TOKEN or API is referenced as \\\"secret:<NAME>\\\"; if the list is empty the node falls back to \\\"secret:HTTP_TOKEN\\\".\"}},\"additionalProperties\":true}},\"required\":[\"intent\"]}"
       },
       {
         "name": "validate_http_config",
-        "export": "greentic:extension-design/validation.validate-content"
+        "export": "greentic:extension-design/validation.validate-content",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Validate a generated YGTc HTTP node and return diagnostics. Checks that config.base_url is present and uses a supported scheme, that config.auth_type is known and carries an auth_token (warning when the token is not a \"secret:<NAME>\" reference), and that config.timeout_ms is greater than zero and not above the recommended 60000 ms.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"node\":{\"type\":\"object\",\"description\":\"The HTTP node to validate. Only its \\\"config\\\" block is inspected.\",\"properties\":{\"config\":{\"type\":\"object\",\"properties\":{\"base_url\":{\"type\":\"string\",\"description\":\"Required. Must be a valid URL with a supported scheme.\"},\"auth_type\":{\"type\":\"string\",\"enum\":[\"none\",\"bearer\",\"api_key\",\"basic\"],\"description\":\"Defaults to \\\"none\\\" when absent.\"},\"auth_token\":{\"type\":\"string\",\"description\":\"Required unless auth_type is \\\"none\\\". Should be a \\\"secret:<NAME>\\\" reference; a raw token is reported as a warning.\"},\"timeout_ms\":{\"type\":\"integer\",\"description\":\"Must be greater than 0; above 60000 is reported as a warning.\"}},\"additionalProperties\":true}},\"additionalProperties\":true}},\"required\":[\"node\"]}"
       },
       {
         "name": "curl_to_node",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Convert a curl command into a YGTc HTTP node. Splits the URL into base_url and path, maps the method, body and remaining headers onto the node, rewrites an Authorization: Bearer/Basic header into a \"secret:<NAME>\" reference, and reports curl flags it could not map as diagnostics.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"curl_cmd\":{\"type\":\"string\",\"description\":\"The full curl command to import, e.g. \\\"curl -X POST https://api.example.com/users -H 'Authorization: Bearer xxx' -d '{\\\\\\\"name\\\\\\\":\\\\\\\"alice\\\\\\\"}'\\\". It must contain a URL.\"},\"node_id\":{\"type\":\"string\",\"description\":\"Node id for the generated node. Defaults to \\\"http_call\\\".\"}},\"required\":[\"curl_cmd\"]}"
       },
       {
         "name": "suggest_auth",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Recommend auth configuration from a natural-language API description. Matches the description against a table of known APIs (GitHub, OpenAI/Anthropic/Cohere, Airtable, Slack/Discord) and returns auth_type, a \"secret:<NAME>\" token reference, any default headers, a rationale and a confidence level; unknown APIs come back as auth_type \"unknown\" with low confidence.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"api_description\":{\"type\":\"string\",\"description\":\"Description of the API to authenticate against, e.g. \\\"GitHub REST API v3\\\". Matched case-insensitively against the known-API keyword list.\"}},\"required\":[\"api_description\"]}"
       },
       {
         "name": "generate_from_card_submit",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Generate an HTTP node that maps Adaptive Card submit fields to an API body. Collects every Input.* id in the card, builds a JSON body_template of \"${submit.<id>}\" placeholders, and returns a card_to_body mapping plus the fields it deliberately left unmapped.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"card_schema\":{\"type\":\"object\",\"description\":\"The Adaptive Card JSON. Walked recursively for elements whose \\\"type\\\" starts with \\\"Input.\\\"; each such element's \\\"id\\\" becomes a body field.\",\"additionalProperties\":true},\"api_intent\":{\"type\":\"string\",\"description\":\"Natural-language description of the API call, e.g. \\\"POST to /api/tickets with form fields as JSON\\\". The method comes from a post/put/patch keyword (default POST) and the path from the first /-prefixed token (default \\\"/\\\").\"},\"node_id\":{\"type\":\"string\",\"description\":\"Node id for the generated node. Defaults to \\\"http_call\\\".\"}},\"required\":[\"card_schema\",\"api_intent\"]}"
       }
     ]
   }

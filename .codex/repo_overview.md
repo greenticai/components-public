@@ -59,6 +59,8 @@ Current scope includes chat2data components, message/event adapters, `component-
 - **Key functionality:**
   - Ship `describe.json` metadata, node type descriptors, tools, prompts, schemas, i18n, and generated WIT bindings as applicable.
   - Designer node types are contributed through `contributions.nodeTypes` with snake_case `config_schema`.
+  - `http-extension` and `webhook-extension` declare full tool metadata in `contributions.tools[]`: `description`, `input_schema` (JSON Schema serialized as a string), and `capabilities`. These mirror each crate's `src/tools/mod.rs::list_tools()` table and its handlers — keep the two in sync. The declarative fields are the only source of tool metadata once an extension moves to `apiVersion: greentic.ai/v2`, where the runtime stops calling the wasm `list-tools` export.
+  - `llm-generic-extension` and `platform-extension` contribute no tools.
 
 - **Path:** `crates/gtest-fixture-exporter`
 - **Role:** Helper for producing fixture metadata for Greentic test flows.
@@ -76,8 +78,12 @@ Search for explicit markers (`TODO`, `FIXME`, `XXX`, `HACK`, `unimplemented!`, `
 
 ## 4. Broken, Failing, or Conflicting Areas
 - **Location:** Workspace checks
-- **Evidence:** `cargo test --workspace --all-targets` and `cargo clippy --workspace --all-targets` pass after adding `component-sorx-business`. `bash ci/local_check.sh` fails in its `make build` step (`cargo build --workspace`) while linking existing native extension crates (`platform-extension`, `llm-generic-extension`, `webhook-extension`): `rust-lld` rejects WIT export names such as `cabi_post_greentic:extension-base/lifecycle@0.1.0#init` in the native version script.
-- **Likely cause / nature of issue:** Existing extension crates are cdylib/WIT-oriented and do not currently native-link cleanly under the repo-level `make build`; the new Sorx component builds natively and for `wasm32-wasip2`.
+- **Evidence:** `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, and `cargo test --workspace --all-targets` pass. `bash ci/local_check.sh` now gets past `make build` / `make test` and fails only on its last step, `greentic-integration-tester run --gtest tests/gtests/README ...`, with `command not found` when that binary is not installed in the environment. The previously recorded `rust-lld` failure on `make build` (WIT export names such as `cabi_post_greentic:extension-base/lifecycle@0.1.0#init`) did not reproduce during the last refresh.
+- **Likely cause / nature of issue:** `greentic-integration-tester` is an external tool the wrapper assumes on `PATH`; it is not vendored in this repo.
+
+- **Location:** `crates/http-extension/describe.json`, `crates/webhook-extension/describe.json`
+- **Evidence:** `gtdx lint --dir <crate>` reports two errors on each file: `E_SCHEMA_HOST` (`$schema` still points at `describe-v1.json`) and `E_ENGINE_DEPRECATED` (the `engine` block should become `compat`). Both files also still use `runtime.component`, which the current `greentic-extension-sdk-contract` `Runtime` struct rejects in favour of `runtime.components`, so a whole-document `serde_json::from_str::<DescribeJson>` fails on them.
+- **Likely cause / nature of issue:** Both extensions are still on `apiVersion: greentic.ai/v1` and have not been migrated to the v2 describe shape. Pre-existing; the migration changes runtime dispatch and belongs in its own change.
 
 - **Location:** Publish/runtime workflows
 - **Evidence:** Publish workflows depend on GHCR auth/permissions, target availability, and network connectivity.
