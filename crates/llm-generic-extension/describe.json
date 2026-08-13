@@ -1,11 +1,11 @@
 {
-  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
-  "apiVersion": "greentic.ai/v1",
+  "apiVersion": "greentic.ai/v2",
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
   "kind": "DesignExtension",
   "metadata": {
     "id": "greentic.llm-generic",
     "name": "LLM (generic)",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "summary": "Generic LLM step node for Greentic flows",
     "description": "Ships the canonical generic `llm` nodeType — a fallback for prompt-driven AI steps that aren't pinned to a specific provider. Provider-specific extensions (greentic.llm-openai and friends) ship richer nodeTypes that implement the actual completion call; this generic node is a placeholder the planner can target when the provider is unknown or pluggable. Pure metadata extension: no WASM logic, only the descriptor + JSON Schema the designer needs to render the inspector form.",
     "author": {
@@ -21,9 +21,29 @@
       "design-extension"
     ]
   },
-  "engine": {
-    "greenticDesigner": ">=0.6.0",
-    "extRuntime": "^0.1.0"
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "llm",
+        "label": "LLM",
+        "category": "ai",
+        "icon": "brain",
+        "color": "#a855f7",
+        "complexity": "complex",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"model\"],\"properties\":{\"model\":{\"type\":\"string\",\"description\":\"Model id (e.g. claude-haiku-4-5, gpt-4o, llama3:8b)\",\"default\":\"claude-haiku-4-5\",\"examples\":[\"claude-haiku-4-5\",\"gpt-4o\",\"gpt-4o-mini\",\"llama3:8b\"]},\"system\":{\"type\":\"string\",\"description\":\"System prompt\",\"format\":\"textarea\"},\"temperature\":{\"type\":\"number\",\"description\":\"Sampling temperature. 0 is deterministic, higher values increase diversity. Common range 0–2 depending on the provider; check your model's docs for valid bounds. Leave unset to use the provider default.\"},\"max_tokens\":{\"type\":\"integer\",\"description\":\"Maximum number of tokens to generate\",\"minimum\":1}}}",
+        "output_ports": [
+          {
+            "name": "default",
+            "label": "Next"
+          },
+          {
+            "name": "error",
+            "label": "Error"
+          }
+        ]
+      }
+    ],
+    "tools": []
   },
   "capabilities": {
     "offered": [
@@ -34,56 +54,29 @@
     ],
     "required": []
   },
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
   "runtime": {
-    "component": "extension.wasm",
     "memoryLimitMB": 16,
     "permissions": {
       "network": [],
       "secrets": [],
       "callExtensionKinds": []
-    }
-  },
-  "contributions": {
-    "nodeTypes": [
-      {
-        "type_id": "llm",
-        "label": "LLM",
-        "category": "ai",
-        "icon": "brain",
-        "color": "#a855f7",
-        "complexity": "complex",
-        "config_schema": {
-          "type": "object",
-          "required": ["model"],
-          "properties": {
-            "model": {
-              "type": "string",
-              "description": "Model id (e.g. claude-haiku-4-5, gpt-4o, llama3:8b)",
-              "default": "claude-haiku-4-5",
-              "examples": ["claude-haiku-4-5", "gpt-4o", "gpt-4o-mini", "llama3:8b"]
-            },
-            "system": {
-              "type": "string",
-              "description": "System prompt",
-              "format": "textarea"
-            },
-            "temperature": {
-              "type": "number",
-              "description": "Sampling temperature. 0 is deterministic, higher values increase diversity. Common range 0–2 depending on the provider; check your model's docs for valid bounds. Leave unset to use the provider default."
-            },
-            "max_tokens": {
-              "type": "integer",
-              "description": "Maximum number of tokens to generate",
-              "minimum": 1
-            }
-          }
+    },
+    "components": {
+      "main": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.llm-generic",
+          "component_version": "1.2.1"
         },
-        "output_ports": [
-          { "name": "default", "label": "Next" },
-          { "name": "error", "label": "Error" }
-        ]
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "main"
       }
-    ],
-    "tools": []
+    }
   }
 }

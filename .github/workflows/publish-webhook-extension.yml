@@ -36,6 +36,16 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
       - uses: greenticai/greentic-designer-extension-action@v2
         with:
+          # Pin required: the action's default installs the latest crates.io
+          # release of greentic-extension-sdk-cli, which is 1.1.5 — too old for
+          # this repo's describes. It rejects `apiVersion: greentic.ai/v1`, and
+          # older gtdx also fails on a v2 describe with no `engine` block
+          # ("engine is a required property") and on the v2 tool fields
+          # `capabilities` / `description` / `input_schema`. Research-channel
+          # builds are not on crates.io, so the action installs this from the
+          # SDK git tag `v1.3.0-research.1`. Verified with
+          # `gtdx publish --dry-run` against all four describes in this repo.
+          gtdx-version: "=1.3.0-research.1"
           manifest: crates/webhook-extension/Cargo.toml
           store-url: ${{ vars.GREENTIC_STORE_URL }}
           store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}

@@ -1,13 +1,13 @@
 {
-  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
-  "apiVersion": "greentic.ai/v1",
+  "apiVersion": "greentic.ai/v2",
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
   "kind": "DesignExtension",
   "metadata": {
     "id": "greentic.http",
     "name": "HTTP Client",
     "version": "1.2.1",
     "summary": "Generate and validate HTTP call nodes for Greentic flows",
-    "description": "Teaches the Designer LLM to generate YGTc HTTP nodes from natural language, curl commands, or card submit contexts. Wraps component-http runtime \u2014 does not make HTTP calls itself.",
+    "description": "Teaches the Designer LLM to generate YGTc HTTP nodes from natural language, curl commands, or card submit contexts. Wraps component-http runtime — does not make HTTP calls itself.",
     "author": {
       "name": "Greentic",
       "email": "team@greentic.ai"
@@ -23,44 +23,7 @@
     ],
     "icon": "assets/icon.svg"
   },
-  "engine": {
-    "greenticDesigner": ">=0.6.0",
-    "extRuntime": "^0.1.0"
-  },
-  "capabilities": {
-    "offered": [
-      {
-        "id": "greentic:http/node-generator",
-        "version": "1.0.0"
-      },
-      {
-        "id": "greentic:http/validate",
-        "version": "1.0.0"
-      },
-      {
-        "id": "greentic:http/curl-import",
-        "version": "1.0.0"
-      }
-    ],
-    "required": []
-  },
-  "runtime": {
-    "component": "extension.wasm",
-    "memoryLimitMB": 32,
-    "permissions": {
-      "network": [],
-      "secrets": [],
-      "callExtensionKinds": []
-    }
-  },
   "contributions": {
-    "schemas": [
-      "schemas/http-node-v1.json"
-    ],
-    "prompts": [
-      "prompts/rules.md",
-      "prompts/examples.md"
-    ],
     "nodeTypes": [
       {
         "type_id": "http",
@@ -69,31 +32,16 @@
         "icon": "🌐",
         "color": "#7c3aed",
         "complexity": "simple",
-        "config_schema": {
-          "type": "object",
-          "required": ["url", "method"],
-          "properties": {
-            "url": {
-              "type": "string",
-              "description": "Request URL"
-            },
-            "method": {
-              "type": "string",
-              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
-            },
-            "headers": {
-              "type": "object",
-              "additionalProperties": { "type": "string" }
-            },
-            "body_mapping": {
-              "type": "object",
-              "additionalProperties": { "type": "string" }
-            }
-          }
-        },
+        "config_schema": "{\"type\":\"object\",\"required\":[\"url\",\"method\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"Request URL\"},\"method\":{\"type\":\"string\",\"enum\":[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\"]},\"headers\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"body_mapping\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}}}",
         "output_ports": [
-          { "name": "success", "label": "Success" },
-          { "name": "error", "label": "Error" }
+          {
+            "name": "success",
+            "label": "Success"
+          },
+          {
+            "name": "error",
+            "label": "Error"
+          }
         ]
       }
     ],
@@ -143,6 +91,61 @@
         "description": "Generate an HTTP node that maps Adaptive Card submit fields to an API body. Collects every Input.* id in the card, builds a JSON body_template of \"${submit.<id>}\" placeholders, and returns a card_to_body mapping plus the fields it deliberately left unmapped.",
         "input_schema": "{\"type\":\"object\",\"properties\":{\"card_schema\":{\"type\":\"object\",\"description\":\"The Adaptive Card JSON. Walked recursively for elements whose \\\"type\\\" starts with \\\"Input.\\\"; each such element's \\\"id\\\" becomes a body field.\",\"additionalProperties\":true},\"api_intent\":{\"type\":\"string\",\"description\":\"Natural-language description of the API call, e.g. \\\"POST to /api/tickets with form fields as JSON\\\". The method comes from a post/put/patch keyword (default POST) and the path from the first /-prefixed token (default \\\"/\\\").\"},\"node_id\":{\"type\":\"string\",\"description\":\"Node id for the generated node. Defaults to \\\"http_call\\\".\"}},\"required\":[\"card_schema\",\"api_intent\"]}"
       }
+    ],
+    "prompts": [
+      {
+        "path": "prompts/rules.md"
+      },
+      {
+        "path": "prompts/examples.md"
+      }
+    ],
+    "schemas": [
+      {
+        "path": "schemas/http-node-v1.json"
+      }
     ]
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:http/node-generator",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:http/validate",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:http/curl-import",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "runtime": {
+    "memoryLimitMB": 32,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "main": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.http",
+          "component_version": "1.2.1"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "main"
+      }
+    }
   }
 }
