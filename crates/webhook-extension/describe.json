@@ -130,15 +130,30 @@
     "tools": [
       {
         "name": "validate_webhook_config",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Validate a webhook trigger config block and return diagnostics. Checks that method is one of GET/POST/PUT/PATCH, that path is present, absolute and free of whitespace, '?' and '#', that auth.type is one of none/bearer/hmac/basic and carries a bare secret_ref when it is not \"none\", that any signature_validation block has a header, a secret_ref and a supported algorithm, and that every allowed_sources entry is a valid IP or CIDR.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"node\":{\"type\":\"object\",\"description\":\"The webhook trigger node to validate. Only its \\\"config\\\" block is inspected.\",\"properties\":{\"config\":{\"type\":\"object\",\"properties\":{\"method\":{\"type\":\"string\",\"enum\":[\"GET\",\"POST\",\"PUT\",\"PATCH\"],\"description\":\"Required. HTTP method the webhook accepts.\"},\"path\":{\"type\":\"string\",\"description\":\"Required. URL path the runtime listens on. Must start with '/' and contain no whitespace, '?' or '#'; a trailing slash is reported as a warning.\"},\"auth\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"none\",\"bearer\",\"hmac\",\"basic\"],\"description\":\"Defaults to \\\"none\\\" when absent.\"},\"secret_ref\":{\"type\":\"string\",\"description\":\"Required unless type is \\\"none\\\". Bare secret name; a \\\"secret:\\\" prefix is reported as a warning.\"}},\"additionalProperties\":true},\"signature_validation\":{\"type\":\"object\",\"properties\":{\"header\":{\"type\":\"string\",\"description\":\"Required when the block is present. Header carrying the signature.\"},\"algorithm\":{\"type\":\"string\",\"enum\":[\"hmac-sha256\",\"hmac-sha1\"]},\"secret_ref\":{\"type\":\"string\",\"description\":\"Required when the block is present. Bare name of the signing-key secret.\"}},\"additionalProperties\":true},\"allowed_sources\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Each entry must be a valid IPv4/IPv6 address or CIDR block.\"}},\"additionalProperties\":true}},\"additionalProperties\":true}},\"required\":[\"node\"]}"
       },
       {
         "name": "suggest_path",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Slugify an intent string into a webhook path (e.g. \"Receive Stripe events\" -> \"/webhooks/stripe-events\"). Returns the path plus a rationale. An intent that is already an absolute path with no whitespace is passed through unchanged.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"intent\":{\"type\":\"string\",\"description\":\"What the webhook receives, e.g. \\\"Receive Stripe events\\\". Non-alphanumeric characters become '-', filler words (receive, incoming, for, from, the, a, an, to, into) are dropped once the intent has more than two words, and the slug is placed under \\\"/webhooks/\\\". An intent that slugifies to nothing is an error.\"}},\"required\":[\"intent\"]}"
       },
       {
         "name": "infer_auth_from_curl",
-        "export": "greentic:extension-design/tools.invoke-tool"
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Infer the inbound webhook auth shape (bearer/basic/hmac) from a sample curl that an upstream system would send to the webhook endpoint. Returns a suggested_config with method, path, auth and — when a signature header is present — signature_validation, plus a rationale. Falls back to auth.type \"none\" when no auth or signature header is found.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"curl_cmd\":{\"type\":\"string\",\"description\":\"A sample curl the upstream system would send INTO the webhook, e.g. \\\"curl -X POST https://host/webhooks/stripe -H 'Stripe-Signature: t=1,v1=abc'\\\". The method comes from -X/--request (default POST), the path from the URL, and the auth shape from the Authorization and signature headers.\"}},\"required\":[\"curl_cmd\"]}"
       }
     ]
   }
