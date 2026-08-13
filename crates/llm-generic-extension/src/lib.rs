@@ -107,4 +107,9 @@ impl knowledge::Guest for Component {
     }
 }
 
+// The generated `export_name`s carry WIT-qualified names containing `:` and
+// `@`, which the native linker version script cannot parse. They are only
+// meaningful for the wasm component anyway, so keep them off the native build
+// (http-extension already does this).
+#[cfg(target_arch = "wasm32")]
 bindings::export!(Component with_types_in bindings);

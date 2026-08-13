@@ -9,7 +9,7 @@ authors = [
 build = "build.rs"
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wit-bindgen-rt.workspace = true
