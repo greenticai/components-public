@@ -58,9 +58,12 @@ Current scope includes chat2data components, message/event adapters, `component-
 - **Role:** Designer extension packages.
 - **Key functionality:**
   - Ship `describe.json` metadata, node type descriptors, tools, prompts, schemas, i18n, and generated WIT bindings as applicable.
-  - Designer node types are contributed through `contributions.nodeTypes` with snake_case `config_schema`.
-  - `http-extension` and `webhook-extension` declare full tool metadata in `contributions.tools[]`: `description`, `input_schema` (JSON Schema serialized as a string), and `capabilities`. These mirror each crate's `src/tools/mod.rs::list_tools()` table and its handlers — keep the two in sync. The declarative fields are the only source of tool metadata once an extension moves to `apiVersion: greentic.ai/v2`, where the runtime stops calling the wasm `list-tools` export.
-  - `llm-generic-extension` and `platform-extension` contribute no tools.
+  - All four are on `apiVersion: greentic.ai/v2` (`$schema` = `store.greentic.cloud/schemas/describe-v2.json`). Migrated with `greentic_extension_sdk_contract::migration::migrate_v0_4_x_value`, the contract crate's own v1->v2 helper — use it rather than hand-editing if another describe needs migrating.
+  - v2 shape notes: there is no `engine` block (version constraints live in `compat`); `runtime.components` is a map (this repo uses a single `main` entry) rather than the v1 `runtime.component` string; `NodeType.config_schema` and `Tool.input_schema` are JSON Schemas **serialized as strings**, not objects; `prompts` / `schemas` / `knowledge` entries are `{path}` objects, not bare strings.
+  - `runtime.components.main.sha256` and `.gtpack.sha256` are committed as all-zero placeholders. `gtdx publish` substitutes the real `extension.wasm` digest while packing, so leave them as zeros; `gtdx lint --publish` flags them (`E_SHA256_ZERO`) but plain `gtdx lint` and `gtdx validate` are clean.
+  - `http-extension` and `webhook-extension` declare full tool metadata in `contributions.tools[]`: `description`, `input_schema`, and `capabilities`. These mirror each crate's `src/tools/mod.rs::list_tools()` table and its handlers — keep the two in sync, because on the v2 path the runtime never calls the wasm `list-tools` export and the describe is the only source.
+  - `llm-generic-extension` and `platform-extension` contribute no tools (their `list_tools()` returns an empty vec), so the v2 switch removes nothing from them.
+  - The publish workflows pin `gtdx-version: "=1.3.0-research.1"`. The action's default installs the latest crates.io release (1.1.5), which is too old for these describes. Do not drop the pin without re-verifying via `gtdx publish --dry-run`.
 
 - **Path:** `crates/gtest-fixture-exporter`
 - **Role:** Helper for producing fixture metadata for Greentic test flows.
@@ -81,9 +84,9 @@ Search for explicit markers (`TODO`, `FIXME`, `XXX`, `HACK`, `unimplemented!`, `
 - **Evidence:** `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, and `cargo test --workspace --all-targets` pass. `bash ci/local_check.sh` now gets past `make build` / `make test` and fails only on its last step, `greentic-integration-tester run --gtest tests/gtests/README ...`, with `command not found` when that binary is not installed in the environment. The previously recorded `rust-lld` failure on `make build` (WIT export names such as `cabi_post_greentic:extension-base/lifecycle@0.1.0#init`) did not reproduce during the last refresh.
 - **Likely cause / nature of issue:** `greentic-integration-tester` is an external tool the wrapper assumes on `PATH`; it is not vendored in this repo.
 
-- **Location:** `crates/http-extension/describe.json`, `crates/webhook-extension/describe.json`
-- **Evidence:** `gtdx lint --dir <crate>` reports two errors on each file: `E_SCHEMA_HOST` (`$schema` still points at `describe-v1.json`) and `E_ENGINE_DEPRECATED` (the `engine` block should become `compat`). Both files also still use `runtime.component`, which the current `greentic-extension-sdk-contract` `Runtime` struct rejects in favour of `runtime.components`, so a whole-document `serde_json::from_str::<DescribeJson>` fails on them.
-- **Likely cause / nature of issue:** Both extensions are still on `apiVersion: greentic.ai/v1` and have not been migrated to the v2 describe shape. Pre-existing; the migration changes runtime dispatch and belongs in its own change.
+- **Location:** `crates/*/describe.json` — `runtime.components.main.world`
+- **Evidence:** The v1->v2 migration helper emits the literal `"main"` for `world`, and nothing in this repo supplies a better value: all four `wit/world.wit` files declare `package greentic:http; world extension`, including `webhook-extension`, `platform-extension`, and `llm-generic-extension`, whose `[package.metadata.component] package` says otherwise. `gtdx validate`, `gtdx lint`, and `gtdx publish --dry-run` all accept `"main"`.
+- **Likely cause / nature of issue:** The `package greentic:http` line looks copy-pasted across the three non-http extensions. Deciding the real world reference needs the WIT packages fixed first; left as the helper default rather than guessed.
 
 - **Location:** Publish/runtime workflows
 - **Evidence:** Publish workflows depend on GHCR auth/permissions, target availability, and network connectivity.

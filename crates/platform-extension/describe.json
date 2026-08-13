@@ -1,11 +1,11 @@
 {
-  "$schema": "https://store.greentic.ai/schemas/describe-v1.json",
-  "apiVersion": "greentic.ai/v1",
+  "apiVersion": "greentic.ai/v2",
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
   "kind": "DesignExtension",
   "metadata": {
     "id": "greentic.platform-bootstrap",
     "name": "Greentic Platform Primitives",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "summary": "Canonical node-type descriptors for editor primitives the platform itself owns",
     "description": "Ships the start nodeType — the only structural primitive the platform itself owns. Webhook trigger moved to `greentic.webhook` in 0.2.0; the generic LLM nodeType moved to `greentic.llm-generic` in 0.3.0. Other extensions specialise these over time — provider extensions can register their own trigger types (slack-trigger, teams-trigger, …) and llm-specific extensions can register typed LLM nodes (greentic.llm-openai, …) — but the editor always has a baseline. Pure metadata extension: no tools, no schemas, no prompts, no knowledge.",
     "author": {
@@ -21,9 +21,24 @@
       "design-extension"
     ]
   },
-  "engine": {
-    "greenticDesigner": ">=0.6.0",
-    "extRuntime": "^0.1.0"
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "start",
+        "label": "Start",
+        "category": "trigger",
+        "icon": "🚩",
+        "color": "#475569",
+        "complexity": "simple",
+        "config_schema": "null",
+        "output_ports": [
+          {
+            "name": "default",
+            "label": "Next"
+          }
+        ]
+      }
+    ]
   },
   "capabilities": {
     "offered": [
@@ -34,29 +49,29 @@
     ],
     "required": []
   },
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
   "runtime": {
-    "component": "extension.wasm",
     "memoryLimitMB": 16,
     "permissions": {
       "network": [],
       "secrets": [],
       "callExtensionKinds": []
-    }
-  },
-  "contributions": {
-    "nodeTypes": [
-      {
-        "type_id": "start",
-        "label": "Start",
-        "category": "trigger",
-        "icon": "🚩",
-        "color": "#475569",
-        "complexity": "simple",
-        "config_schema": null,
-        "output_ports": [
-          { "name": "default", "label": "Next" }
-        ]
+    },
+    "components": {
+      "main": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.platform-bootstrap",
+          "component_version": "1.2.1"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "main"
       }
-    ]
+    }
   }
 }
