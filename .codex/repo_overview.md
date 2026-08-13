@@ -64,6 +64,8 @@ Current scope includes chat2data components, message/event adapters, `component-
   - `http-extension` and `webhook-extension` declare full tool metadata in `contributions.tools[]`: `description`, `input_schema`, and `capabilities`. These mirror each crate's `src/tools/mod.rs::list_tools()` table and its handlers — keep the two in sync, because on the v2 path the runtime never calls the wasm `list-tools` export and the describe is the only source.
   - `llm-generic-extension` and `platform-extension` contribute no tools (their `list_tools()` returns an empty vec), so the v2 switch removes nothing from them.
   - The publish workflows pin `gtdx-version: "=1.3.0-research.1"`. The action's default installs the latest crates.io release (1.1.5), which is too old for these describes. Do not drop the pin without re-verifying via `gtdx publish --dry-run`.
+  - All four use `crate-type = ["cdylib", "rlib"]`. `cdylib` is required — without it `cargo component build` emits no `.wasm` and the extension cannot be packed or published at all. Correspondingly, `bindings::export!` must stay behind `#[cfg(target_arch = "wasm32")]` in every one of them: the generated `export_name`s are WIT-qualified names containing `:` and `@`, and an ungated `export!` makes the native `cdylib` link fail with `rust-lld: ... list:3: ; expected, but got :`. The two settings are a pair; changing one without the other breaks either publishing or `make build`.
+  - Verify a describe/packaging change with `CARGO_TARGET_DIR=$(mktemp -d) gtdx publish --dry-run`. A dry-run against the shared workspace target dir can pass on a stale `.wasm` left by an earlier build and hide exactly this failure.
 
 - **Path:** `crates/gtest-fixture-exporter`
 - **Role:** Helper for producing fixture metadata for Greentic test flows.
@@ -81,7 +83,7 @@ Search for explicit markers (`TODO`, `FIXME`, `XXX`, `HACK`, `unimplemented!`, `
 
 ## 4. Broken, Failing, or Conflicting Areas
 - **Location:** Workspace checks
-- **Evidence:** `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, and `cargo test --workspace --all-targets` pass. `bash ci/local_check.sh` now gets past `make build` / `make test` and fails only on its last step, `greentic-integration-tester run --gtest tests/gtests/README ...`, with `command not found` when that binary is not installed in the environment. The previously recorded `rust-lld` failure on `make build` (WIT export names such as `cabi_post_greentic:extension-base/lifecycle@0.1.0#init`) did not reproduce during the last refresh.
+- **Evidence:** `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, and `cargo test --workspace --all-targets` pass. `bash ci/local_check.sh` runs cleanly through `make build` / `make test` and fails only on its last step, `greentic-integration-tester run --gtest tests/gtests/README ...`, with `command not found` when that binary is not installed in the environment. The `rust-lld` failure on `make build` recorded earlier is resolved: its real cause was an ungated `bindings::export!` in the three extension crates, now behind `#[cfg(target_arch = "wasm32")]`, so `cdylib` and the native workspace build coexist.
 - **Likely cause / nature of issue:** `greentic-integration-tester` is an external tool the wrapper assumes on `PATH`; it is not vendored in this repo.
 
 - **Location:** `crates/*/describe.json` — `runtime.components.main.world`
