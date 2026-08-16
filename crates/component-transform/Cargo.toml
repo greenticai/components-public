@@ -19,9 +19,14 @@ world = "greentic:component/component-v0-v6-v0@0.6.0"
 
 [dependencies]
 serde.workspace = true
-# preserve_order (IndexMap) is REQUIRED: `json_pick`'s contract is that output
-# key order follows `keys`, which a hash-ordered map cannot honour.
-serde_json = { version = "1", features = ["preserve_order"] }
+# NOT `preserve_order`. The design extension enables it in its own workspace,
+# but cargo unifies features across THIS one, so turning it on here silently
+# changes the JSON key order every other component in the repo emits — it broke
+# component-chat2data-translator's tests the moment it was added. Key order in a
+# JSON object is insignificant (RFC 8259) and nothing in a flow reads a value
+# positionally, so the cost of not having it is a serialization detail; the cost
+# of having it is a workspace-wide behaviour change nobody asked for.
+serde_json.workspace = true
 greentic-types.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

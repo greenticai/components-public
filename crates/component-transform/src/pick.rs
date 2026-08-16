@@ -7,14 +7,22 @@
 
 use serde_json::{Map, Value};
 
-/// Build a new JSON object containing, in `keys` order, every entry of `obj`
-/// whose key appears in `keys`.
+/// Build a new JSON object containing every entry of `obj` whose key appears in
+/// `keys`.
 ///
-/// Three rules, each of which a caller can and does depend on:
-/// - output key order follows `keys`, not `obj`
+/// Two rules, both of which a caller can and does depend on:
 /// - a key listed in `keys` but absent from `obj` is SKIPPED, not inserted as
 ///   null — a missing field and a null field are different facts downstream
 /// - duplicate entries in `keys` are de-duplicated
+///
+/// Key ORDER is deliberately not part of this contract, and that is the one
+/// place this diverges from the tool flavour. The design extension enables
+/// serde_json's `preserve_order` in its own workspace so its output follows
+/// `keys`; doing the same here would enable it for every component in THIS
+/// workspace and change the JSON they all emit. Object key order is
+/// insignificant per RFC 8259 and nothing in a flow reads a value positionally,
+/// so the divergence is a serialization detail rather than a difference in what
+/// the operation means.
 pub fn pick_json(obj: &Map<String, Value>, keys: &[String]) -> Value {
     let mut result = Map::new();
     let mut seen: Vec<&str> = Vec::with_capacity(keys.len());
@@ -94,15 +102,24 @@ mod tests {
         assert_eq!(pick_json(&obj, &keys), json!({"a": 1}));
     }
 
-    /// Output order follows `keys`, not the input object — which is why this
-    /// crate requires serde_json's `preserve_order`.
+    /// Selection is by MEMBERSHIP, independent of the order `keys` lists them
+    /// in — pinned as an equality on the whole object, which is what "key order
+    /// is not part of the contract" means concretely.
+    ///
+    /// This deliberately does NOT assert an order. Asserting one would require
+    /// serde_json's `preserve_order`, and enabling that here enables it for
+    /// every component in this workspace: it broke
+    /// component-chat2data-translator's tests the moment it was tried.
     #[test]
-    fn output_order_follows_keys_not_the_object() {
+    fn selection_is_by_membership_not_by_the_order_keys_lists() {
         let obj = map(&json!({"a": 1, "b": 2, "c": 3}));
-        let keys = vec!["c".to_string(), "a".to_string()];
-        let got = pick_json(&obj, &keys);
-        let order: Vec<&String> = got.as_object().unwrap().keys().collect();
-        assert_eq!(order, vec!["c", "a"]);
+        let forwards = pick_json(&obj, &["a".to_string(), "c".to_string()]);
+        let backwards = pick_json(&obj, &["c".to_string(), "a".to_string()]);
+        assert_eq!(forwards, json!({"a": 1, "c": 3}));
+        assert_eq!(
+            forwards, backwards,
+            "the same key SET must project to the same object"
+        );
     }
 
     #[test]
