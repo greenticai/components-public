@@ -1,0 +1,34 @@
+[package]
+name = "component-transform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Pure-JSON transform component for Greentic flows (json_pick)"
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.component]
+package = "greentic:component"
+
+[package.metadata.component.target]
+world = "greentic:component/component-v0-v6-v0@0.6.0"
+
+[dependencies]
+serde.workspace = true
+# NOT `preserve_order`. The design extension enables it in its own workspace,
+# but cargo unifies features across THIS one, so turning it on here silently
+# changes the JSON key order every other component in the repo emits — it broke
+# component-chat2data-translator's tests the moment it was added. Key order in a
+# JSON object is insignificant (RFC 8259) and nothing in a flow reads a value
+# positionally, so the cost of not having it is a serialization detail; the cost
+# of having it is a workspace-wide behaviour change nobody asked for.
+serde_json.workspace = true
+greentic-types.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+greentic-interfaces-guest = { workspace = true, features = ["component-v0-6"] }
+wit-bindgen.workspace = true
