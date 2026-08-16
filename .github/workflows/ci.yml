@@ -128,6 +128,8 @@ jobs:
             artifact: component_msg2events.wasm
           - name: component-sorx-business
             artifact: component_sorx_business.wasm
+          - name: component-transform
+            artifact: component_transform.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
