@@ -136,6 +136,12 @@ jobs:
             artifact: component_firecrawl.wasm
           - name: component-twilio
             artifact: component_twilio.wasm
+          - name: component-tavily
+            artifact: component_tavily.wasm
+          - name: component-resend
+            artifact: component_resend.wasm
+          - name: component-trello
+            artifact: component_trello.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0

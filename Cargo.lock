@@ -293,7 +293,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "component-resend"
+version = "1.1.0"
+dependencies = [
+ "greentic-interfaces-guest",
+ "greentic-types",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "component-sorx-business"
+version = "1.1.0"
+dependencies = [
+ "greentic-interfaces-guest",
+ "greentic-types",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
+name = "component-tavily"
 version = "1.1.0"
 dependencies = [
  "greentic-interfaces-guest",
@@ -311,6 +333,17 @@ dependencies = [
  "greentic-types",
  "json-patch",
  "jsonschema",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
+name = "component-trello"
+version = "1.1.0"
+dependencies = [
+ "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
