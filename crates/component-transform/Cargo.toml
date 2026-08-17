@@ -17,6 +17,15 @@ package = "greentic:component"
 [package.metadata.component.target]
 world = "greentic:component/component-v0-v6-v0@0.6.0"
 
+[features]
+# Off by default, and there is currently NO dependency behind it. `jsonpath_lib`
+# — the only crate that implements what `query_jsonpath` / `json_reshape` need —
+# enables `serde_json/preserve_order` transitively, and cargo unifies features
+# across this workspace, so adding it changes the JSON key order every component
+# here emits. The flag exists so the two functions and their tests stay in the
+# tree, compiled out, until that is solved deliberately.
+jsonpath = []
+
 [dependencies]
 serde.workspace = true
 # NOT `preserve_order`. The design extension enables it in its own workspace,
@@ -28,6 +37,12 @@ serde.workspace = true
 # of having it is a workspace-wide behaviour change nobody asked for.
 serde_json.workspace = true
 greentic-types.workspace = true
+# Same three libraries the design extension uses, at the same majors, because the
+# pure logic modules below are ITS modules copied verbatim — a different
+# jsonschema or json-patch here would make the node and the tool disagree about
+# what an operation does.
+jsonschema = { version = "0.18", default-features = false }
+json-patch = { version = "2", default-features = false, features = ["diff"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 greentic-interfaces-guest = { workspace = true, features = ["component-v0-6"] }

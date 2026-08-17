@@ -23,10 +23,16 @@ use serde_json::Value;
 use greentic_types::cbor::canonical;
 
 pub use describe::{SchemaIr, input_schema, output_schema};
-pub use pick::{handle_pick, pick_json};
+pub use select::pick_json;
 
+mod core;
 mod describe;
-mod pick;
+mod flatten;
+mod ops;
+mod output;
+mod patch;
+mod select;
+mod sort;
 
 #[cfg(target_arch = "wasm32")]
 use greentic_interfaces_guest::component_v0_6::node;
@@ -41,17 +47,63 @@ const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// node type the extension's describe.json contributes. The runner dispatches on
 /// it and does not default — a mismatch is a flow that builds green and dies on
 /// its first run.
-pub const OP_JSON_PICK: &str = "json_pick";
+/// Every operation this component exposes. The strings are a CROSS-REPO
+/// contract: each one appears here, in the `describe()` op list, and as the
+/// `operation` of a node type in `greentic.transform`'s describe.json. The
+/// runner dispatches on it and does not default, so a mismatch is a flow that
+/// builds green and dies on its first run.
+pub const OPS: &[&str] = &[
+    "json_validate",
+    "json_merge_patch",
+    "json_flatten",
+    "json_unflatten",
+    "json_dedup",
+    "json_pick",
+    "json_omit",
+    "json_patch",
+    "json_diff",
+    "json_sort",
+];
 
 /// Route an operation name to its handler. Extracted from the WIT layer so it
 /// is testable off-wasm; the `node::Guest` impl is a thin wrapper over it.
 pub fn dispatch(op: &str, input: &Value) -> Value {
     match op {
-        OP_JSON_PICK => handle_pick(input),
-        other => serde_json::json!({
-            "ok": false,
-            "error": format!("unsupported op: {other}")
-        }),
+        "json_validate" => ops::json_validate(input),
+        "json_merge_patch" => ops::json_merge_patch(input),
+        "json_flatten" => ops::json_flatten(input),
+        "json_unflatten" => ops::json_unflatten(input),
+        "json_dedup" => ops::json_dedup(input),
+        "json_pick" => ops::json_pick(input),
+        "json_omit" => ops::json_omit(input),
+        "json_patch" => ops::json_patch(input),
+        "json_diff" => ops::json_diff(input),
+        "json_sort" => ops::json_sort(input),
+        other => ops::err(format!("unsupported op: {other}")),
+    }
+}
+
+/// One line per operation, shown wherever the descriptor is rendered.
+///
+/// Note these ops all declare the SAME open input schema. That is deliberate:
+/// the authoritative, field-level schema an operator authors against is the node
+/// type's `config_schema` in `greentic.transform`'s describe.json, which is the
+/// TOOL's own `input_schema` copied verbatim. Writing a second, hand-built
+/// SchemaIr per operation here would create a rival source of truth for the same
+/// twelve argument shapes, and nothing would detect the two drifting apart.
+pub fn op_summary(op: &str) -> &'static str {
+    match op {
+        "json_validate" => "Validate JSON against a JSON Schema",
+        "json_merge_patch" => "Apply an RFC 7386 JSON Merge Patch",
+        "json_flatten" => "Flatten nested JSON to delimiter-joined keys",
+        "json_unflatten" => "Rebuild nested JSON from delimiter-joined keys",
+        "json_dedup" => "Remove duplicate entries from an array",
+        "json_pick" => "Project a JSON object down to a listed set of keys",
+        "json_omit" => "Drop a listed set of keys from a JSON object",
+        "json_patch" => "Apply an RFC 6902 JSON Patch",
+        "json_diff" => "Produce an RFC 6902 patch between two documents",
+        "json_sort" => "Sort an array, optionally by a field",
+        _ => "Unknown operation",
     }
 }
 
@@ -107,21 +159,28 @@ impl node::Guest for Component {
             summary: Some("Pure-JSON transforms for Greentic flows".to_string()),
             // No host capabilities: every operation here is in-wasm compute.
             capabilities: Vec::new(),
-            ops: vec![node::Op {
-                name: OP_JSON_PICK.to_string(),
-                summary: Some("Project a JSON object down to a listed set of keys".to_string()),
-                input: node::IoSchema {
-                    schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(&input_schema())),
-                    content_type: "application/cbor".to_string(),
-                    schema_version: None,
-                },
-                output: node::IoSchema {
-                    schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(&output_schema())),
-                    content_type: "application/cbor".to_string(),
-                    schema_version: None,
-                },
-                examples: Vec::new(),
-            }],
+            ops: OPS
+                .iter()
+                .map(|op| node::Op {
+                    name: (*op).to_string(),
+                    summary: Some(op_summary(op).to_string()),
+                    input: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &input_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    output: node::IoSchema {
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &output_schema(),
+                        )),
+                        content_type: "application/cbor".to_string(),
+                        schema_version: None,
+                    },
+                    examples: Vec::new(),
+                })
+                .collect(),
             schemas: Vec::new(),
             setup: None,
         }
@@ -237,10 +296,26 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn dispatch_routes_the_declared_op() {
-        let out = dispatch(OP_JSON_PICK, &json!({"data": {"a": 1}, "keys": ["a"]}));
-        assert_eq!(out["ok"], true);
-        assert_eq!(out["result"], json!({"a": 1}));
+    fn every_declared_op_dispatches_to_a_real_handler() {
+        for op in OPS {
+            let out = dispatch(op, &json!({}));
+            let error = out["error"].as_str().unwrap_or("");
+            assert!(
+                !error.contains("unsupported op"),
+                "`{op}` is declared in OPS but has no dispatch arm"
+            );
+        }
+    }
+
+    #[test]
+    fn every_declared_op_has_a_summary() {
+        for op in OPS {
+            assert_ne!(
+                op_summary(op),
+                "Unknown operation",
+                "`{op}` is declared in OPS with no summary"
+            );
+        }
     }
 
     /// An unknown op reports a routable error rather than silently succeeding
@@ -253,12 +328,68 @@ mod tests {
         assert!(out["error"].as_str().unwrap().contains("unsupported op"));
     }
 
-    /// The op name is a cross-repo contract: this component's dispatch arm, its
-    /// `describe()` op list, and the `operation` on the node type the extension
-    /// contributes must all be this exact string.
+    /// Missing arguments are a VALUE a flow can route on, never a panic. Run
+    /// against every op, because one handler unwrapping is all it takes to turn
+    /// a bad payload into a dead run.
     #[test]
-    fn the_op_name_is_the_one_the_node_type_declares() {
-        assert_eq!(OP_JSON_PICK, "json_pick");
+    fn no_op_panics_on_an_empty_payload() {
+        for op in OPS {
+            let out = dispatch(op, &json!({}));
+            assert_eq!(out["ok"], false, "`{op}` should report, not succeed");
+        }
+    }
+
+    #[test]
+    fn json_pick_projects_by_membership() {
+        let out = dispatch(
+            "json_pick",
+            &json!({"data": {"a": 1, "b": 2}, "keys": ["b"]}),
+        );
+        assert_eq!(out["ok"], true);
+        assert_eq!(out["result"], json!({"b": 2}));
+    }
+
+    #[test]
+    fn json_omit_drops_the_listed_keys() {
+        let out = dispatch(
+            "json_omit",
+            &json!({"data": {"a": 1, "b": 2}, "keys": ["b"]}),
+        );
+        assert_eq!(out["ok"], true);
+        assert_eq!(out["result"], json!({"a": 1}));
+    }
+
+    #[test]
+    fn json_merge_patch_applies_rfc_7386() {
+        let out = dispatch(
+            "json_merge_patch",
+            &json!({"target": {"a": 1, "b": 2}, "patch": {"b": null, "c": 3}}),
+        );
+        assert_eq!(out["ok"], true);
+        assert_eq!(out["result"], json!({"a": 1, "c": 3}));
+    }
+
+    #[test]
+    fn json_flatten_and_unflatten_round_trip() {
+        let nested = json!({"a": {"b": 1}});
+        let flat = dispatch("json_flatten", &json!({"data": nested}));
+        assert_eq!(flat["ok"], true);
+        let back = dispatch("json_unflatten", &json!({"data": flat["result"]}));
+        assert_eq!(back["ok"], true);
+        assert_eq!(back["result"], json!({"a": {"b": 1}}));
+    }
+
+    #[test]
+    fn json_validate_reports_a_schema_mismatch_without_failing_the_node() {
+        let out = dispatch(
+            "json_validate",
+            &json!({"schema": {"type": "object", "required": ["a"]}, "data": {}}),
+        );
+        assert_eq!(
+            out["ok"], true,
+            "a failed VALIDATION is still a successful CALL"
+        );
+        assert_eq!(out["result"]["valid"], false);
     }
 
     #[test]
