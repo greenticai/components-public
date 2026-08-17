@@ -21,6 +21,9 @@ use greentic_interfaces_guest::secrets_store;
 #[cfg(target_arch = "wasm32")]
 const TIMEOUT_MS: u32 = 60_000;
 
+/// Off-wasm `send` is a stub that issues nothing, so nothing reads these
+/// fields in a host build — the same idiom `lib.rs` uses for `COMPONENT_ID`.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub struct HttpReq {
     pub method: String,
     pub url: String,
