@@ -144,6 +144,12 @@ jobs:
             artifact: component_trello.wasm
           - name: component-stripe
             artifact: component_stripe.wasm
+          - name: component-calendly
+            artifact: component_calendly.wasm
+          - name: component-jira
+            artifact: component_jira.wasm
+          - name: component-clickup
+            artifact: component_clickup.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
