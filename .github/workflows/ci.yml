@@ -132,6 +132,10 @@ jobs:
             artifact: component_transform.wasm
           - name: component-notion
             artifact: component_notion.wasm
+          - name: component-firecrawl
+            artifact: component_firecrawl.wasm
+          - name: component-twilio
+            artifact: component_twilio.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
