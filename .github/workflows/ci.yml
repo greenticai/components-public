@@ -142,6 +142,8 @@ jobs:
             artifact: component_resend.wasm
           - name: component-trello
             artifact: component_trello.wasm
+          - name: component-stripe
+            artifact: component_stripe.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
