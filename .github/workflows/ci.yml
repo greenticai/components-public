@@ -154,6 +154,8 @@ jobs:
             artifact: component_hubspot.wasm
           - name: component-sql
             artifact: component_sql.wasm
+          - name: component-k8s
+            artifact: component_k8s.wasm
           - name: component-gcal
             artifact: component_gcal.wasm
     steps:
