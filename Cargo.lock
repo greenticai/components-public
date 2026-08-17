@@ -171,6 +171,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "component-calendly"
+version = "1.1.0"
+dependencies = [
+ "greentic-interfaces-guest",
+ "greentic-types",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "component-chat2data-executor"
 version = "1.1.0"
 dependencies = [
@@ -226,6 +237,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "component-clickup"
+version = "1.1.0"
+dependencies = [
+ "greentic-interfaces-guest",
+ "greentic-types",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "component-events2msg"
 version = "1.1.0"
 dependencies = [
@@ -254,6 +276,17 @@ dependencies = [
  "greentic-interfaces-guest",
  "greentic-types",
  "http-core",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
+
+[[package]]
+name = "component-jira"
+version = "1.1.0"
+dependencies = [
+ "greentic-interfaces-guest",
+ "greentic-types",
  "serde",
  "serde_json",
  "wit-bindgen",
