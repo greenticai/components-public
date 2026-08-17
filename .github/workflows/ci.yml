@@ -150,6 +150,10 @@ jobs:
             artifact: component_jira.wasm
           - name: component-clickup
             artifact: component_clickup.wasm
+          - name: component-hubspot
+            artifact: component_hubspot.wasm
+          - name: component-gcal
+            artifact: component_gcal.wasm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
