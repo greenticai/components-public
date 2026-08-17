@@ -192,7 +192,11 @@ pub fn analyze_crashloop(input: &Value) -> Value {
     with_client(input, |c| diagnose::analyze_crashloop(c, &namespace, &pod))
 }
 
-pub fn get_resource_pressure(input: &Value) -> Value {
+/// Named for the operation, which was renamed away from `get_resource_pressure`:
+/// gtdx refuses a tool list where one name is a prefix of another on a `_`
+/// boundary, and `get_resource` made that pair confusable for a model choosing
+/// between them.
+pub fn report_node_pressure(input: &Value) -> Value {
     with_client(input, diagnose::get_resource_pressure)
 }
 
