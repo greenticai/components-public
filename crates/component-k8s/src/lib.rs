@@ -46,7 +46,9 @@ mod clusters;
 mod describe;
 mod host;
 mod json;
-mod k8s;
+/// Public so the URL-path builders keep the extension's own doctests, which are
+/// where the API-version/namespace path rules are actually pinned.
+pub mod k8s;
 mod ops;
 mod tools;
 mod transport;
