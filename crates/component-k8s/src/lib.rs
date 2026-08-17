@@ -80,7 +80,7 @@ pub const OPS: &[&str] = &[
     "k8s_triage_namespace",
     "k8s_triage_cluster",
     "k8s_analyze_crashloop",
-    "k8s_get_resource_pressure",
+    "k8s_report_node_pressure",
     "k8s_check_rollout_status",
 ];
 
@@ -101,7 +101,7 @@ pub fn dispatch(op: &str, input: &Value) -> Value {
         "k8s_triage_namespace" => ops::triage_namespace(input),
         "k8s_triage_cluster" => ops::triage_cluster(input),
         "k8s_analyze_crashloop" => ops::analyze_crashloop(input),
-        "k8s_get_resource_pressure" => ops::get_resource_pressure(input),
+        "k8s_report_node_pressure" => ops::report_node_pressure(input),
         "k8s_check_rollout_status" => ops::check_rollout_status(input),
         other => ops::err(format!("unsupported op: {other}")),
     }
@@ -127,7 +127,7 @@ pub fn op_summary(op: &str) -> &'static str {
         "k8s_analyze_crashloop" => {
             "Explain why a pod is crash-looping, from its previous logs and events"
         }
-        "k8s_get_resource_pressure" => "Report nodes under CPU or memory pressure",
+        "k8s_report_node_pressure" => "Report nodes under CPU or memory pressure",
         "k8s_check_rollout_status" => "Report whether a workload's rollout has completed",
         _ => "Unknown operation",
     }
