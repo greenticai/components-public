@@ -1,7 +1,12 @@
-//! The read-only half of `greentic.k8s`, copied verbatim.
+//! The tool modules `greentic.k8s` ships, copied from the extension.
 //!
-//! The extension's third tool module, `remediate`, is deliberately absent —
-//! see the note at the top of `lib.rs`.
+//! `remediate` carries only the EIGHT mutators that can be authorised without a
+//! human present. `drain_node` and `delete_resource` are deliberately absent —
+//! their own author judged them destructive enough to require `confirm: true`,
+//! and a flow cannot supply one: a `confirm` typed into node config is a
+//! constant the flow author wrote, and authorises nothing at the moment the
+//! step runs.
 
 pub mod diagnose;
 pub mod observe;
+pub mod remediate;
