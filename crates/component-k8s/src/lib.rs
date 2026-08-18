@@ -8,17 +8,26 @@
 //! observation and diagnosis operations exported as flow nodes through
 //! `greentic:component/node@0.6`.
 //!
-//! **Only the read-only half is ported, and that is a decision, not an
-//! omission.** The extension ships 26 tools, ten of which mutate a cluster
-//! (`apply_manifest`, `delete_resource`, `patch_resource`, `scale_workload`,
-//! `drain_node`, `rollout_undo`, `delete_pod`, `cordon_node`, `uncordon_node`,
-//! `rollout_restart`) — and only two of those ten require `confirm: true`. As
-//! AGENTIC-WORKER tools they sit behind a worker's guardrails and a per-cluster
-//! `allow_write` secret. As FLOW STEPS they would be reachable from any flow,
-//! against any endpoint the node names. That trade-off is an operator's call to
-//! make explicitly, so nothing here makes it for them: the extension's
-//! `remediate` module is not compiled into this crate at all, and the only
-//! `K8sClient` any caller can obtain is built inside `ops::with_client`.
+//! **Writes are ported, and gated.** The extension ships 26 tools, ten of which
+//! mutate a cluster. Eight are here; `drain_node` and `delete_resource` are
+//! not, because both require `confirm: true` and a flow cannot supply one — a
+//! `confirm` typed into node config is a constant the flow author wrote, and
+//! authorises nothing at the moment the step runs.
+//!
+//! The gate on the other eight is the extension's own: `allow_write`, a
+//! per-cluster secret checked before any client is built. What makes it hold
+//! for a FLOW step is that `transport::NodeSecrets` answers it from the SECRET
+//! STORE ONLY and never from node config — so drawing a flow and authorising
+//! cluster mutation stay two different powers, held by two different people.
+//! Absent, it resolves to `false`, so a cluster is read-only until somebody
+//! provisions it.
+//!
+//! Above that gate sits the token's own Kubernetes RBAC, which the node cannot
+//! exceed. The gate decides only whether this component will try.
+//!
+//! Reads go through `ops::with_client`; writes through `ops::with_write_client`,
+//! which refuses BEFORE a client exists — so a refused write issues no request
+//! at all, rather than one that fails.
 //!
 //! `clusters`, `k8s`, `json` and both read-only tool modules are the
 //! extension's own, copied verbatim — they were already WIT-free, because the
@@ -81,6 +90,14 @@ pub const OPS: &[&str] = &[
     "k8s_triage_cluster",
     "k8s_analyze_crashloop",
     "k8s_report_node_pressure",
+    "k8s_scale_workload",
+    "k8s_rollout_restart",
+    "k8s_rollout_undo",
+    "k8s_delete_pod",
+    "k8s_cordon_node",
+    "k8s_uncordon_node",
+    "k8s_patch_resource",
+    "k8s_apply_manifest",
     "k8s_check_rollout_status",
 ];
 
@@ -102,6 +119,14 @@ pub fn dispatch(op: &str, input: &Value) -> Value {
         "k8s_triage_cluster" => ops::triage_cluster(input),
         "k8s_analyze_crashloop" => ops::analyze_crashloop(input),
         "k8s_report_node_pressure" => ops::report_node_pressure(input),
+        "k8s_scale_workload" => ops::scale_workload(input),
+        "k8s_rollout_restart" => ops::rollout_restart(input),
+        "k8s_rollout_undo" => ops::rollout_undo(input),
+        "k8s_delete_pod" => ops::delete_pod(input),
+        "k8s_cordon_node" => ops::cordon_node(input),
+        "k8s_uncordon_node" => ops::uncordon_node(input),
+        "k8s_patch_resource" => ops::patch_resource(input),
+        "k8s_apply_manifest" => ops::apply_manifest(input),
         "k8s_check_rollout_status" => ops::check_rollout_status(input),
         other => ops::err(format!("unsupported op: {other}")),
     }
@@ -128,6 +153,14 @@ pub fn op_summary(op: &str) -> &'static str {
             "Explain why a pod is crash-looping, from its previous logs and events"
         }
         "k8s_report_node_pressure" => "Report nodes under CPU or memory pressure",
+        "k8s_scale_workload" => "Scale a workload to a replica count",
+        "k8s_rollout_restart" => "Restart a workload's rollout",
+        "k8s_rollout_undo" => "Roll a deployment back to its previous revision",
+        "k8s_delete_pod" => "Delete a pod so its controller recreates it",
+        "k8s_cordon_node" => "Mark a node unschedulable",
+        "k8s_uncordon_node" => "Mark a node schedulable again",
+        "k8s_patch_resource" => "Apply a patch to a resource",
+        "k8s_apply_manifest" => "Apply a manifest to the cluster",
         "k8s_check_rollout_status" => "Report whether a workload's rollout has completed",
         _ => "Unknown operation",
     }
@@ -343,24 +376,16 @@ mod tests {
         }
     }
 
-    /// The whole point of this crate is that it cannot mutate a cluster. Naming
-    /// the ten refused operations here means a later "just add scale_workload"
-    /// has to delete an assertion that says why it was left out, rather than
-    /// simply extending a match arm.
+    /// The two operations that stay out, named so a later "just add
+    /// delete_resource" has to delete an assertion that says why it was left
+    /// out rather than simply extending a match arm.
+    ///
+    /// Both require `confirm: true`, and a flow cannot supply one: a `confirm`
+    /// typed into node config is a constant the flow author wrote, and
+    /// authorises nothing at the moment the step runs.
     #[test]
-    fn no_mutating_operation_is_reachable() {
-        for op in [
-            "k8s_apply_manifest",
-            "k8s_delete_resource",
-            "k8s_patch_resource",
-            "k8s_scale_workload",
-            "k8s_drain_node",
-            "k8s_rollout_undo",
-            "k8s_delete_pod",
-            "k8s_cordon_node",
-            "k8s_uncordon_node",
-            "k8s_rollout_restart",
-        ] {
+    fn the_two_confirm_gated_operations_are_not_reachable() {
+        for op in ["k8s_drain_node", "k8s_delete_resource"] {
             assert!(
                 !OPS.contains(&op),
                 "{op} must not be exposed as a flow step"

@@ -56,13 +56,29 @@ pub fn resolve_secret(token: &str) -> Result<String, String> {
 /// resolver unchanged is deliberate — it brings its own tests, including the
 /// cluster-name charset check that stops a name reshaping a secret URI.
 ///
-/// `allow_write` is answered `Err` unconditionally, which resolves to
-/// `allow_write: false`. That is not a policy this component enforces so much as
-/// a fact it reports: no write handler was ported, so there is nothing here for
-/// a `true` to enable.
+/// **`allow_write` is answered from the SECRET STORE ONLY, never from node
+/// config, and that asymmetry is the whole gate.**
+///
+/// `api_url` and `token` are things a flow author legitimately writes on a node
+/// (each may itself be a `secret:NAME` reference). `allow_write` is not: if it
+/// could be typed into the canvas, then drawing a flow and authorising writes
+/// to a cluster would be the same act, and anyone who could edit a flow could
+/// turn mutation on. Reading it only from the store keeps those two powers with
+/// two different people — the flow author draws the step, the operator who
+/// controls secrets decides whether it may write.
+///
+/// Absent (the default) resolves to `allow_write: false` through
+/// `clusters::resolve_cluster`, so a cluster is read-only until somebody
+/// provisions `k8s/<cluster>/allow_write`.
+///
+/// Note the ceiling above this gate is the token's own Kubernetes RBAC. A node
+/// cannot exceed what its credential permits; this decides only whether the
+/// component will try.
 pub struct NodeSecrets {
     pub api_url: String,
     pub token: String,
+    /// Cluster label, used to build the `allow_write` secret key.
+    pub cluster: String,
 }
 
 impl SecretStore for NodeSecrets {
@@ -70,9 +86,30 @@ impl SecretStore for NodeSecrets {
         match uri.rsplit('/').next() {
             Some("api_url") => Ok(self.api_url.clone()),
             Some("token") => Ok(self.token.clone()),
+            Some("allow_write") => read_allow_write(&self.cluster),
             _ => Err(format!("not configured on this node: {uri}")),
         }
     }
+}
+
+/// Read `k8s/<cluster>/allow_write` from the secret store.
+///
+/// Any failure — absent, unreadable, not valid UTF-8 — is `Err`, which
+/// `resolve_cluster` turns into `allow_write: false`. Failing CLOSED is the
+/// only acceptable direction here: an unreadable gate must not read as an open
+/// one.
+#[cfg(target_arch = "wasm32")]
+fn read_allow_write(cluster: &str) -> Result<String, String> {
+    match secrets_store::get(&format!("k8s/{cluster}/allow_write")) {
+        Ok(Some(bytes)) => String::from_utf8(bytes).map_err(|_| "not utf-8".to_string()),
+        Ok(None) => Err("allow_write is not set".to_string()),
+        Err(_) => Err("allow_write could not be read".to_string()),
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn read_allow_write(cluster: &str) -> Result<String, String> {
+    std::env::var(format!("k8s_{cluster}_allow_write")).map_err(|_| "allow_write is not set".into())
 }
 
 pub struct HostHttp;
@@ -129,6 +166,7 @@ mod tests {
         let store = NodeSecrets {
             api_url: "https://api.example".into(),
             token: "tok".into(),
+            cluster: "prod".into(),
         };
         assert_eq!(
             store.get("secret://k8s/prod/api_url").unwrap(),
@@ -145,6 +183,7 @@ mod tests {
         let store = NodeSecrets {
             api_url: "https://api.example".into(),
             token: "tok".into(),
+            cluster: "prod".into(),
         };
         assert!(store.get("secret://k8s/prod/allow_write").is_err());
         let creds = crate::clusters::resolve_cluster(&store, "prod").unwrap();
