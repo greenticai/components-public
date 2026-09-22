@@ -6,6 +6,7 @@ files=(
   crates/llm-generic-extension/src/bindings.rs
   crates/platform-extension/src/bindings.rs
   crates/webhook-extension/src/bindings.rs
+  crates/schedule-extension/src/bindings.rs
 )
 
 for file in "${files[@]}"; do
