@@ -1,24 +1,34 @@
 //! Greentic webhook design extension.
 //!
-//! Carries the canonical `webhook trigger` nodeType. Webhook is
-//! operator-side ingress — the runtime exposes an HTTP listener,
-//! validates auth, and kicks off flow execution when a request
-//! matches the configured path. This extension ships:
+//! Carries the `webhook trigger` nodeType under trigger contract v1
+//! (`docs/trigger-contract-v1.md` in greentic-designer): the flow is started
+//! by a VERIFIED HTTP call to `<deployment-prefix>/trigger/<trigger_id>`,
+//! which greentic-start serves — there is no operator-chosen path and no
+//! unverified route. This extension ships:
 //!
-//! - the trigger nodeType + JSON Schema (rendered by the designer
-//!   inspector); and
-//! - three design-time tools the designer LLM can call:
+//! - the trigger nodeType + its JSON Schema, whose root carries the
+//!   `x-trigger-kind` keyword the designer reads to decide the node emits a
+//!   `webhook` declaration into `assets/triggers.json` (see
+//!   `describe_tests.rs` for why the marker lives there and not in
+//!   `contributions`); and
+//! - four design-time tools the designer LLM can call:
 //!     * `validate_webhook_config`
 //!     * `suggest_path`
 //!     * `infer_auth_from_curl`
+//!     * `suggest_verification`
 //!
-//! The WASM exports for prompting / validation / knowledge remain
-//! no-op stubs — the extension does not contribute prompt fragments,
-//! a knowledge base, or content-type validators yet.
+//! The WASM exports for prompting / validation / knowledge remain no-op stubs
+//! — the extension contributes no prompt fragments, no knowledge base and no
+//! content-type validators.
 
 #[allow(warnings)]
 mod bindings;
 mod tools;
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+#[path = "describe_tests.rs"]
+mod describe_tests;
 
 use bindings::exports::greentic::extension_base::{lifecycle, manifest};
 use bindings::exports::greentic::extension_design::{

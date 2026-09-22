@@ -1,10 +1,12 @@
-//! `infer_auth_from_curl` — derive inbound webhook auth shape from a curl
-//! the *upstream* system would send to our webhook endpoint.
+//! `infer_auth_from_curl` — derive a webhook trigger's `verify` block from a
+//! curl the *upstream* system would send to our trigger endpoint.
 //!
-//! Note: webhook is ingress, so the curl represents what an external service
-//! sends INTO the runtime. We infer the auth/signature config the runtime
-//! needs to validate that request — not the egress auth shape `http-extension`
-//! produces from the same input.
+//! Webhook is ingress: the curl is what an external service sends INTO the
+//! runtime, and the output is the trigger contract v1 `verify` block the
+//! runtime needs to authenticate it (greentic-designer
+//! `docs/trigger-contract-v1.md` §6.3.3). Secret references are NAMES
+//! (`webhook/signing_key`), never values — the token in the sample curl is
+//! deliberately not copied anywhere.
 
 use serde_json::{Value, json};
 
@@ -16,69 +18,70 @@ pub fn infer_auth_from_curl(args: &Value) -> Result<String, String> {
 
     let headers = parse_headers(cmd);
     let method = parse_method(cmd);
-    let path = parse_path_from_url(cmd);
 
-    let mut auth: Option<Value> = None;
-    let mut signature_validation: Option<Value> = None;
+    let mut verify: Option<Value> = None;
     let mut rationale_lines = Vec::<String>::new();
 
     for (k, v) in &headers {
         let kl = k.to_ascii_lowercase();
-        if kl == "authorization" {
-            if let Some(_tok) = v.strip_prefix("Bearer ") {
-                auth = Some(json!({"type": "bearer", "secret_ref": "WEBHOOK_BEARER"}));
-                rationale_lines.push("Authorization: Bearer → bearer auth".into());
-            } else if v.starts_with("Basic ") {
-                auth = Some(json!({"type": "basic", "secret_ref": "WEBHOOK_BASIC"}));
-                rationale_lines.push("Authorization: Basic → basic auth".into());
+        if kl == "authorization" && verify.is_none() {
+            if v.starts_with("Bearer ") {
+                verify = Some(json!({
+                    "scheme": "bearer",
+                    "header": "Authorization",
+                    "secret_ref": "webhook/bearer_token",
+                }));
+                rationale_lines.push("Authorization: Bearer → verify.scheme = bearer".into());
             } else {
                 rationale_lines.push(format!(
-                    "Authorization scheme '{v}' not recognised — left auth unset"
+                    "Authorization scheme '{}' is not verifiable by the runtime (bearer only)",
+                    v.split_whitespace().next().unwrap_or("")
                 ));
             }
         } else if is_signature_header(&kl) {
-            let algo = if kl.contains("sha256") || v.contains("sha256=") {
-                "hmac-sha256"
-            } else if kl.contains("sha1") || v.contains("sha1=") {
-                "hmac-sha1"
+            let (scheme, prefix) = if kl.contains("sha1") || v.starts_with("sha1=") {
+                ("hmac-sha1", "sha1=")
             } else {
-                "hmac-sha256"
+                ("hmac-sha256", "sha256=")
             };
-            signature_validation = Some(json!({
-                "header": k,
-                "algorithm": algo,
-                "secret_ref": "WEBHOOK_SIGNING_KEY",
-            }));
-            // Pair with hmac auth type when no explicit Authorization header is present
-            if auth.is_none() {
-                auth = Some(json!({"type": "hmac", "secret_ref": "WEBHOOK_SIGNING_KEY"}));
+            if kl == "x-slack-signature" || kl == "stripe-signature" {
+                rationale_lines.push(format!(
+                    "'{k}' signs a timestamp with the body; trigger contract v1 has no \
+                     timestamped scheme yet, so it cannot be verified as-is"
+                ));
+                continue;
             }
-            rationale_lines.push(format!(
-                "Signature header '{k}' → signature_validation ({algo})"
-            ));
+            let prefix = if v.starts_with(prefix) { prefix } else { "" };
+            verify = Some(json!({
+                "scheme": scheme,
+                "header": k,
+                "prefix": prefix,
+                "encoding": "hex",
+                "secret_ref": "webhook/signing_key",
+            }));
+            rationale_lines.push(format!("Signature header '{k}' → verify.scheme = {scheme}"));
         }
     }
 
-    if auth.is_none() && signature_validation.is_none() {
-        rationale_lines
-            .push("No auth or signature headers detected — defaulting to auth.type = none".into());
-        auth = Some(json!({"type": "none"}));
-    }
+    let verify = verify.unwrap_or_else(|| {
+        rationale_lines.push(
+            "No verifiable auth header detected — verify.scheme = none: anyone who knows the \
+             URL can start the flow"
+                .into(),
+        );
+        json!({ "scheme": "none" })
+    });
 
-    let mut suggested = serde_json::Map::new();
-    suggested.insert("method".into(), json!(method));
-    if let Some(p) = path {
-        suggested.insert("path".into(), json!(p));
-    }
-    if let Some(a) = auth {
-        suggested.insert("auth".into(), a);
-    }
-    if let Some(sv) = signature_validation {
-        suggested.insert("signature_validation".into(), sv);
-    }
-
+    let methods = if method == "GET" {
+        json!(["POST"])
+    } else {
+        json!([method])
+    };
     Ok(json!({
-        "suggested_config": Value::Object(suggested),
+        "suggested_config": {
+            "methods": methods,
+            "verify": verify,
+        },
         "rationale": rationale_lines.join("; "),
     })
     .to_string())
@@ -98,20 +101,6 @@ fn parse_method(cmd: &str) -> String {
         return "POST".into();
     }
     "POST".into()
-}
-
-fn parse_path_from_url(cmd: &str) -> Option<String> {
-    let url = cmd
-        .split_ascii_whitespace()
-        .find(|t| t.starts_with("http://") || t.starts_with("https://"))?
-        .trim_matches(|c: char| c == '\'' || c == '"');
-    let after_scheme = url.split_once("://")?.1;
-    let path_start = after_scheme.find('/')?;
-    let mut path = &after_scheme[path_start..];
-    if let Some(idx) = path.find(['?', '#']) {
-        path = &path[..idx];
-    }
-    Some(path.to_string())
 }
 
 fn parse_headers(cmd: &str) -> Vec<(String, String)> {
@@ -171,74 +160,52 @@ mod tests {
     }
 
     #[test]
-    fn detects_bearer_auth() {
-        let v =
-            run(r#"curl -X POST -H 'Authorization: Bearer xyz123' https://example.com/api/hooks"#);
-        let cfg = &v["suggested_config"];
-        assert_eq!(cfg["auth"]["type"], "bearer");
-        assert_eq!(cfg["auth"]["secret_ref"], "WEBHOOK_BEARER");
-        assert_eq!(cfg["method"], "POST");
-        assert_eq!(cfg["path"], "/api/hooks");
+    fn a_bearer_header_becomes_bearer_verification_without_copying_the_token() {
+        let out = run(r#"curl -X POST https://x/hook -H "Authorization: Bearer s3cr3t-token""#);
+        let verify = &out["suggested_config"]["verify"];
+        assert_eq!(verify["scheme"], "bearer");
+        assert_eq!(verify["secret_ref"], "webhook/bearer_token");
+        assert!(!out.to_string().contains("s3cr3t-token"));
     }
 
     #[test]
-    fn detects_basic_auth() {
-        let v = run(r#"curl -H "Authorization: Basic dXNlcjpwYXNz" https://x/intake"#);
-        assert_eq!(v["suggested_config"]["auth"]["type"], "basic");
+    fn a_github_or_meta_signature_becomes_hmac_sha256_with_its_prefix() {
+        let out = run(r#"curl https://x/hook -H "X-Hub-Signature-256: sha256=abc" -d '{}'"#);
+        let verify = &out["suggested_config"]["verify"];
+        assert_eq!(verify["scheme"], "hmac-sha256");
+        assert_eq!(verify["header"], "X-Hub-Signature-256");
+        assert_eq!(verify["prefix"], "sha256=");
     }
 
     #[test]
-    fn detects_github_signature_header() {
-        let v = run(
-            r#"curl -X POST -H 'X-Hub-Signature-256: sha256=abc' -H 'Content-Type: application/json' https://example.com/webhook"#,
-        );
-        let cfg = &v["suggested_config"];
-        assert_eq!(cfg["auth"]["type"], "hmac");
-        assert_eq!(cfg["signature_validation"]["header"], "X-Hub-Signature-256");
-        assert_eq!(cfg["signature_validation"]["algorithm"], "hmac-sha256");
+    fn a_sha1_signature_becomes_hmac_sha1() {
+        let out = run(r#"curl https://x/hook -H "X-Hub-Signature: sha1=abc" -d '{}'"#);
+        assert_eq!(out["suggested_config"]["verify"]["scheme"], "hmac-sha1");
     }
 
     #[test]
-    fn detects_slack_signature_with_sha256() {
-        let v = run(r#"curl -H 'X-Slack-Signature: v0=...' https://x/slack"#);
-        assert_eq!(
-            v["suggested_config"]["signature_validation"]["header"],
-            "X-Slack-Signature"
-        );
+    fn a_timestamped_signature_is_named_as_unsupported_not_guessed() {
+        let out = run(r#"curl https://x/hook -H "X-Slack-Signature: v0=abc" -d '{}'"#);
+        assert_eq!(out["suggested_config"]["verify"]["scheme"], "none");
+        assert!(out["rationale"].as_str().unwrap().contains("timestamp"));
     }
 
     #[test]
-    fn defaults_to_none_when_no_auth_headers() {
-        let v = run("curl https://example.com/ping");
-        assert_eq!(v["suggested_config"]["auth"]["type"], "none");
-        assert_eq!(v["suggested_config"]["method"], "POST");
+    fn no_auth_headers_suggests_none_and_says_what_that_means() {
+        let out = run("curl -X POST https://x/hook -d '{}'");
+        assert_eq!(out["suggested_config"]["verify"]["scheme"], "none");
+        assert!(out["rationale"].as_str().unwrap().contains("anyone"));
     }
 
     #[test]
     fn picks_up_request_flag_method() {
-        let v = run("curl --request PUT https://x/webhook");
-        assert_eq!(v["suggested_config"]["method"], "PUT");
+        let out = run("curl -X PUT https://x/hook");
+        assert_eq!(out["suggested_config"]["methods"], json!(["PUT"]));
     }
 
     #[test]
     fn missing_curl_cmd_errors() {
         let err = infer_auth_from_curl(&json!({})).expect_err("must fail");
         assert!(err.contains("curl_cmd"));
-    }
-
-    #[test]
-    fn auth_takes_precedence_over_signature_for_auth_block() {
-        // If both Authorization: Bearer AND signature header present, auth.type stays bearer
-        let v = run(
-            r#"curl -H 'Authorization: Bearer T' -H 'X-Hub-Signature-256: sha256=abc' https://x/y"#,
-        );
-        assert_eq!(v["suggested_config"]["auth"]["type"], "bearer");
-        // signature_validation still emitted
-        assert!(
-            v["suggested_config"]
-                .as_object()
-                .unwrap()
-                .contains_key("signature_validation")
-        );
     }
 }

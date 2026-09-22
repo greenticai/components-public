@@ -1,17 +1,23 @@
-//! `suggest_path` — slugify an intent string into a webhook path.
+//! `suggest_path` — turn an intent into a trigger id and the route it mounts at.
+//!
+//! Under trigger contract v1 the runtime mounts every webhook trigger at
+//! `<deployment-prefix>/trigger/<trigger_id>`; there is no free-form path
+//! anymore. The tool keeps its name so existing prompts keep working, and
+//! returns the `trigger_id` to put in the node config plus the route it yields.
 //!
 //! Examples:
-//!   "Receive Stripe events"            → /webhooks/stripe-events
-//!   "GitHub PR opened"                 → /webhooks/github-pr-opened
-//!   "/custom/path/already"             → /custom/path/already   (already absolute, untouched)
-//!   "intake from Salesforce"           → /webhooks/intake-from-salesforce
+//!   "Receive Stripe events"   → trigger_id `stripe_events`   → /trigger/stripe_events
+//!   "GitHub PR opened"        → `github_pr_opened`
+//!   "intake from Salesforce"  → `intake_salesforce`
 
 use serde_json::{Value, json};
+
+use super::validate::is_valid_trigger_id;
 
 const NOISE_WORDS: &[&str] = &[
     "receive", "incoming", "for", "from", "the", "a", "an", "to", "into",
 ];
-const PREFIX: &str = "/webhooks/";
+const MAX_LEN: usize = 63;
 
 pub fn suggest_path(args: &Value) -> Result<String, String> {
     let intent = args
@@ -19,18 +25,18 @@ pub fn suggest_path(args: &Value) -> Result<String, String> {
         .and_then(Value::as_str)
         .ok_or("missing required field: intent")?;
 
-    if intent.starts_with('/') && !intent.contains(char::is_whitespace) {
-        return Ok(json!({"path": intent, "rationale": "Input already looks like an absolute path; passed through."}).to_string());
-    }
-
     let slug = slugify(intent);
-    if slug.is_empty() {
+    if slug.is_empty() || !is_valid_trigger_id(&slug) {
         return Err("intent produced an empty slug — provide more descriptive text".into());
     }
-    let path = format!("{PREFIX}{slug}");
     Ok(json!({
-        "path": path,
-        "rationale": format!("Slugified '{intent}' under {PREFIX}* — adjust before publishing if you need a custom prefix."),
+        "trigger_id": slug,
+        "path": format!("/trigger/{slug}"),
+        "rationale": format!(
+            "Slugified '{intent}'. The runtime mounts the trigger at \
+             <deployment-prefix>/trigger/{slug}; set `trigger_id` on the node to keep this URL \
+             stable if the node is renamed."
+        ),
     })
     .to_string())
 }
@@ -44,7 +50,9 @@ fn slugify(input: &str) -> String {
     if tokens.len() > 2 {
         tokens.retain(|t| !NOISE_WORDS.contains(&t.as_str()));
     }
-    tokens.join("-")
+    let mut slug = tokens.join("_");
+    slug.truncate(MAX_LEN);
+    slug
 }
 
 #[cfg(test)]
@@ -52,40 +60,50 @@ fn slugify(input: &str) -> String {
 mod tests {
     use super::*;
 
-    fn path_of(intent: &str) -> String {
-        let raw = suggest_path(&json!({"intent": intent})).expect("ok");
-        let v: Value = serde_json::from_str(&raw).unwrap();
-        v["path"].as_str().unwrap().to_string()
+    fn suggestion(intent: &str) -> Value {
+        serde_json::from_str(&suggest_path(&json!({"intent": intent})).expect("ok")).unwrap()
     }
 
     #[test]
-    fn slugifies_basic_intent() {
-        assert_eq!(path_of("Receive Stripe events"), "/webhooks/stripe-events");
+    fn slugifies_basic_intent_into_a_trigger_id_and_route() {
+        let s = suggestion("Receive Stripe events");
+        assert_eq!(s["trigger_id"], "stripe_events");
+        assert_eq!(s["path"], "/trigger/stripe_events");
     }
 
     #[test]
     fn handles_punctuation_and_case() {
-        assert_eq!(path_of("GitHub: PR Opened!"), "/webhooks/github-pr-opened");
-    }
-
-    #[test]
-    fn drops_noise_words_only_when_intent_is_long() {
-        // "from Salesforce" → 'from' is noise, drops it because >2 tokens
         assert_eq!(
-            path_of("intake from Salesforce"),
-            "/webhooks/intake-salesforce"
+            suggestion("GitHub: PR Opened!")["trigger_id"],
+            "github_pr_opened"
         );
     }
 
     #[test]
-    fn keeps_short_intents_intact() {
-        // 2-token intent should NOT have noise stripped (would empty it out otherwise)
-        assert_eq!(path_of("from slack"), "/webhooks/from-slack");
+    fn drops_noise_words_only_when_intent_is_long() {
+        assert_eq!(
+            suggestion("intake from Salesforce")["trigger_id"],
+            "intake_salesforce"
+        );
+        assert_eq!(suggestion("from slack")["trigger_id"], "from_slack");
     }
 
     #[test]
-    fn passes_through_explicit_absolute_paths() {
-        assert_eq!(path_of("/api/intake"), "/api/intake");
+    fn an_old_style_absolute_path_is_slugified_not_passed_through() {
+        // Free-form paths no longer exist; the route is always /trigger/<id>.
+        assert_eq!(suggestion("/api/intake")["trigger_id"], "api_intake");
+    }
+
+    #[test]
+    fn every_suggestion_is_a_valid_trigger_id() {
+        let long = "x".repeat(200);
+        for intent in ["Receive Stripe events", "9 lives", long.as_str()] {
+            let id = suggestion(intent)["trigger_id"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            assert!(is_valid_trigger_id(&id), "{id}");
+        }
     }
 
     #[test]
