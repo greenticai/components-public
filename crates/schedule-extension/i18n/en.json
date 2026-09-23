@@ -1,0 +1,15 @@
+{
+  "extension.name": "Schedule Trigger",
+  "extension.description": "Start a Greentic flow on a cron schedule.",
+  "extension.summary": "The runtime's scheduler fires the flow when the expression comes due.",
+  "node.trigger.schedule.label": "Schedule Trigger",
+  "node.trigger.schedule.description": "Start the flow on a repeating schedule.",
+  "node.trigger.schedule.config.expr": "Schedule (cron expression)",
+  "node.trigger.schedule.config.timezone": "Time zone",
+  "node.trigger.schedule.config.trigger_id": "Trigger ID",
+  "node.trigger.schedule.config.enabled": "Enabled",
+  "node.trigger.schedule.config.session": "Session grouping",
+  "node.trigger.schedule.config.limits": "Rate limits",
+  "node.trigger.schedule.config.limits.max_concurrency": "Firings allowed at once",
+  "node.trigger.schedule.config.limits.max_firings_per_hour": "Maximum firings per hour"
+}

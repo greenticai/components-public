@@ -1,0 +1,119 @@
+{
+  "apiVersion": "greentic.ai/v2",
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.schedule",
+    "name": "Schedule Trigger",
+    "version": "1.0.0",
+    "summary": "Start a Greentic flow on a cron schedule",
+    "description": "Ships the schedule trigger nodeType (trigger contract v1: greentic-start's scheduler fires the flow when a cron expression comes due and enters it at the node after the trigger) plus three design-time tools (validate_cron, describe_schedule, suggest_cron). The schedule is parsed with the same crate the runtime schedules with, so an expression this extension accepts is one the deploy accepts.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "schedule",
+      "cron",
+      "trigger",
+      "timer",
+      "design-extension"
+    ]
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "trigger.schedule",
+        "label": "Schedule Trigger",
+        "category": "trigger",
+        "icon": "clock",
+        "color": "#8b5cf6",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"x-trigger-kind\":\"cron\",\"required\":[\"expr\"],\"properties\":{\"expr\":{\"type\":\"string\",\"description\":\"Cron expression: 5 fields (minute hour day month weekday, e.g. 0 9 * * 1-5) or 6 with a leading seconds field. Checked with the same parser the runtime schedules with.\"},\"timezone\":{\"type\":\"string\",\"description\":\"IANA zone the expression is read in, e.g. Asia/Jakarta. Absent means UTC — set it whenever the time was meant as local wall-clock time.\"},\"trigger_id\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,62}$\",\"description\":\"Stable id for this trigger. Defaults to the node id; set it to keep the id when the node is renamed.\"},\"enabled\":{\"type\":\"boolean\",\"default\":true,\"description\":\"false keeps the schedule declared but fires nothing (kill switch).\"},\"session\":{\"type\":\"object\",\"description\":\"How firings are grouped into conversations.\",\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"per_run\",\"per_key\"],\"default\":\"per_run\"},\"key\":{\"type\":\"string\",\"description\":\"For per_key: a fixed key shared by every firing of this schedule.\"}}},\"limits\":{\"type\":\"object\",\"properties\":{\"max_concurrency\":{\"type\":\"integer\",\"minimum\":1,\"default\":1,\"description\":\"Firings allowed to run at once. 1 means a slow run delays the next tick rather than overlapping it.\"},\"max_firings_per_hour\":{\"type\":\"integer\",\"minimum\":1}}}}}",
+        "output_ports": [
+          {
+            "name": "default",
+            "label": "Fires"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "validate_cron",
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Validate a schedule trigger config block (trigger contract v1 shape: expr and timezone at the top level) and return diagnostics: expr is required and is parsed exactly as the runtime parses it, timezone must be an IANA zone name, a nested cron object or a legacy field is named with the fix.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"node\":{\"type\":\"object\",\"description\":\"The schedule trigger node to validate. Only its \\\"config\\\" block is inspected.\",\"properties\":{\"config\":{\"type\":\"object\",\"x-trigger-kind\":\"cron\",\"required\":[\"expr\"],\"properties\":{\"expr\":{\"type\":\"string\",\"description\":\"Cron expression: 5 fields (minute hour day month weekday, e.g. 0 9 * * 1-5) or 6 with a leading seconds field. Checked with the same parser the runtime schedules with.\"},\"timezone\":{\"type\":\"string\",\"description\":\"IANA zone the expression is read in, e.g. Asia/Jakarta. Absent means UTC — set it whenever the time was meant as local wall-clock time.\"},\"trigger_id\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,62}$\",\"description\":\"Stable id for this trigger. Defaults to the node id; set it to keep the id when the node is renamed.\"},\"enabled\":{\"type\":\"boolean\",\"default\":true,\"description\":\"false keeps the schedule declared but fires nothing (kill switch).\"},\"session\":{\"type\":\"object\",\"description\":\"How firings are grouped into conversations.\",\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"per_run\",\"per_key\"],\"default\":\"per_run\"},\"key\":{\"type\":\"string\",\"description\":\"For per_key: a fixed key shared by every firing of this schedule.\"}}},\"limits\":{\"type\":\"object\",\"properties\":{\"max_concurrency\":{\"type\":\"integer\",\"minimum\":1,\"default\":1,\"description\":\"Firings allowed to run at once. 1 means a slow run delays the next tick rather than overlapping it.\"},\"max_firings_per_hour\":{\"type\":\"integer\",\"minimum\":1}}}}}},\"additionalProperties\":true}},\"required\":[\"node\"]}"
+      },
+      {
+        "name": "describe_schedule",
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Describe a cron expression in words and list its next five fire times in the declared zone. The prose is best effort and says so when it cannot describe an expression; the fire times are always exact.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"expr\":{\"type\":\"string\",\"description\":\"The cron expression to describe.\"},\"timezone\":{\"type\":\"string\",\"description\":\"IANA zone the expression is read in; absent means UTC.\"},\"from\":{\"type\":\"string\",\"description\":\"RFC 3339 instant to count the next fire times from; absent means now.\"}},\"required\":[\"expr\"]}"
+      },
+      {
+        "name": "suggest_cron",
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Turn a phrase such as 'every weekday at 9am Jakarta time' into a cron expression and an IANA zone. Abstains with a reason when the phrasing is not recognised rather than guessing a schedule.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"A phrase such as 'every weekday at 9am Jakarta time'.\"},\"timezone\":{\"type\":\"string\",\"description\":\"IANA zone; wins over any zone named in the text.\"}},\"required\":[\"text\"]}"
+      }
+    ]
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:schedule/trigger-spec",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:schedule/validate",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:schedule/describe",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:schedule/suggest",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "runtime": {
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "main": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.schedule",
+          "component_version": "1.0.0"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "main"
+      }
+    }
+  }
+}

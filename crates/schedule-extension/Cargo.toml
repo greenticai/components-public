@@ -1,0 +1,28 @@
+[package]
+name = "schedule-extension"
+version = "1.0.0"
+edition = "2024"
+license = "MIT"
+authors = ["Greentic"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wit-bindgen-rt.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+cron.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+
+[package.metadata.component]
+package = "greentic:schedule"
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"greentic:extension-base" = { path = "wit/deps/greentic/extension-base" }
+"greentic:extension-host" = { path = "wit/deps/greentic/extension-host" }
+"greentic:extension-design" = { path = "wit/deps/greentic/extension-design" }

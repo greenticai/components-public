@@ -20,7 +20,17 @@ serde_json = "1"
 thiserror = "2"
 tracing = "0.1"
 greentic-types = ">=1.1.0-0, <1.2.0-0"
+cron = "0.16"
+chrono-tz = "0.10"
 http-core = { path = "crates/http-core" }
+
+[workspace.dependencies.chrono]
+version = "0.4"
+default-features = false
+features = [
+    "alloc",
+    "std",
+]
 
 [workspace.dependencies.serde]
 version = "1"

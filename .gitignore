@@ -17,3 +17,6 @@ SEMVER_FIX_REPORT.md
 # Claude Code worktrees and runtime state
 .claude/
 .greentic/
+
+# Extension build output (build.sh writes the .gtxpack here)
+crates/*/dist/
