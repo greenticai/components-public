@@ -1,10 +1,14 @@
 //! Tool dispatch layer for the webhook DesignExtension.
 //!
-//! Three tools are exposed to the designer LLM:
+//! Four tools are exposed to the designer LLM, all speaking the trigger
+//! contract v1 node config shape (greentic-designer
+//! `docs/trigger-contract-v1.md`):
 //! - `validate_webhook_config` — diagnostics on a webhook trigger config block
-//! - `suggest_path` — slugify an intent string into a webhook path
-//! - `infer_auth_from_curl` — derive inbound auth shape from a sample curl invocation
+//! - `suggest_path` — slugify an intent into a `trigger_id` and its route
+//! - `infer_auth_from_curl` — derive the `verify` block from a sample curl
+//! - `suggest_verification` — `verify` / `challenge` presets per sender
 pub mod curl_import;
+pub mod presets;
 pub mod suggest_path;
 pub mod validate;
 
@@ -26,13 +30,18 @@ pub fn list_tools() -> Vec<ToolDef> {
         ),
         (
             "suggest_path",
-            "Slugify an intent string into a webhook path (e.g. 'Receive Stripe events' → '/webhooks/stripe-events')",
+            "Slugify an intent into a trigger_id and the route it mounts at (e.g. 'Receive Stripe events' → trigger_id 'stripe_events', route /trigger/stripe_events)",
             r#"{"type":"object","properties":{"intent":{"type":"string"}},"required":["intent"]}"#,
         ),
         (
             "infer_auth_from_curl",
-            "Infer the inbound webhook auth shape (bearer/basic/hmac) from a sample curl that an upstream system would send",
+            "Infer the webhook trigger's verify block (hmac-sha256/sha1 or bearer) from a sample curl that an upstream system would send; secret refs are names, never the token in the curl",
             r#"{"type":"object","properties":{"curl_cmd":{"type":"string"}},"required":["curl_cmd"]}"#,
+        ),
+        (
+            "suggest_verification",
+            "Return the verify (and challenge) block for a known sender: threads/instagram/facebook/whatsapp/meta, github, or any other name for a bearer preset",
+            r#"{"type":"object","properties":{"provider":{"type":"string"}},"required":["provider"]}"#,
         ),
     ];
     defs.iter()
@@ -58,6 +67,7 @@ pub fn invoke_tool(name: &str, args_json: &str) -> Result<String, String> {
         }
         "suggest_path" => suggest_path::suggest_path(&args),
         "infer_auth_from_curl" => curl_import::infer_auth_from_curl(&args),
+        "suggest_verification" => presets::suggest_verification(&args),
         other => Err(format!("unknown tool: {other}")),
     }
 }
@@ -68,14 +78,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_tools_returns_three_definitions() {
+    fn list_tools_returns_four_definitions() {
         let tools = list_tools();
         let names: Vec<_> = tools.iter().map(|t| t.name.as_str()).collect();
-        assert_eq!(names.len(), 3);
+        assert_eq!(names.len(), 4);
         for expected in [
             "validate_webhook_config",
             "suggest_path",
             "infer_auth_from_curl",
+            "suggest_verification",
         ] {
             assert!(names.contains(&expected), "missing tool: {expected}");
         }
