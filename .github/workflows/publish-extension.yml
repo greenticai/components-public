@@ -48,4 +48,9 @@ jobs:
           manifest: crates/http-extension/Cargo.toml
           store-url: ${{ vars.GREENTIC_STORE_URL }}
           store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}
+          # Authenticates the UPLOAD. The Store re-signs what it serves with
+          # the `greentic` publisher key, so this is not the key operators
+          # verify against -- but the action fails closed without it, which is
+          # what has blocked every publish here since 2026-08-27.
+          signing-key-pem: ${{ secrets.EXT_SIGNING_KEY_PEM }}
           version: ${{ steps.ver.outputs.version }}
