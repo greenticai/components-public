@@ -1,0 +1,70 @@
+{
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "apiVersion": "greentic.ai/v2",
+  "kind": "DesignExtension",
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "metadata": {
+    "id": "greentic.guardrail-pii",
+    "name": "PII-masking guardrail",
+    "version": "0.1.0",
+    "summary": "Reference guardrail that masks emails/phones and denies on a configurable blocklist",
+    "description": "Stateless guardrail extension. Evaluates inbound/outbound content: denies if input.context JSON contains a blocklist match, masks emails and phone numbers on update, accepts otherwise. Implements greentic:extension-design/guardrail.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "guardrail",
+      "pii",
+      "privacy",
+      "design-extension"
+    ]
+  },
+  "engine": {
+    "greenticDesigner": ">=1.2.0",
+    "extRuntime": "^1.2.0"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:guardrail/pii",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "guardrail-pii": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "01a43efb76cabab362bb425c0e9c5de371a3004cd4a2493129e4e97fb4148a27",
+          "pack_id": "greentic.guardrail-pii",
+          "component_version": "0.1.0"
+        },
+        "sha256": "01a43efb76cabab362bb425c0e9c5de371a3004cd4a2493129e4e97fb4148a27",
+        "world": "greentic:extension-design/guardrail@0.3.0"
+      }
+    }
+  },
+  "contributions": {
+    "guardrails": [
+      {
+        "export": "greentic:extension-design/guardrail.evaluate",
+        "runtime_ref": "guardrail-pii"
+      }
+    ]
+  }
+}

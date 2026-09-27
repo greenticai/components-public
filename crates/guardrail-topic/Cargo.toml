@@ -1,0 +1,42 @@
+[package]
+name = "greentic-guardrail-topic"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90.0"
+license = "MIT"
+publish = false
+description = "Reference PII-masking guardrail design extension for Greentic (masks emails/phones, denies on blocklist)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wit-bindgen = "0.41"
+wit-bindgen-rt = "0.41"
+
+[dev-dependencies]
+proptest = "1"
+
+[package.metadata.component]
+package = "greentic:guardrail-topic"
+
+[package.metadata.component.target]
+path = "wit"
+world = "guardrail-topic-extension"
+
+[package.metadata.component.target.dependencies]
+"greentic:extension-base" = { path = "wit/deps/extension-base/extension-base.wit" }
+"greentic:extension-host" = { path = "wit/deps/extension-host/extension-host.wit" }
+"greentic:extension-design" = { path = "wit/deps/extension-design/extension-design.wit" }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+used_underscore_items = "allow"
+doc_markdown = "allow"

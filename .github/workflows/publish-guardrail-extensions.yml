@@ -1,0 +1,69 @@
+name: Publish Guardrail Extensions
+
+# Publishes the five guardrail design extensions (.gtxpack) on
+# `guardrail-ext-v*` tag pushes:
+#
+#   greentic.guardrail-injection   (greentic:guardrail/injection)
+#   greentic.guardrail-pii         (greentic:guardrail/pii)
+#   greentic.guardrail-secrets     (greentic:guardrail/secrets)
+#   greentic.guardrail-topic       (greentic:guardrail/topic)
+#   greentic.guardrail-profanity   (greentic:guardrail/profanity)
+#
+# The five ship together under one tag because they share a version line and
+# are registered together in the admin's guardrail registry. Version published
+# = tag name with the leading `guardrail-ext-v` stripped; it must match every
+# crate's Cargo.toml and describe.json `metadata.version`.
+
+on:
+  push:
+    tags: ['guardrail-ext-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Extension version to publish (must match every describe.json)'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      # One guardrail failing to publish must not cancel the other four.
+      fail-fast: false
+      matrix:
+        guardrail: [injection, pii, secrets, topic, profanity]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        env:
+          GUARDRAIL: ${{ matrix.guardrail }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#guardrail-ext-v}"
+          fi
+          DESCRIBED="$(jq -r .metadata.version "crates/guardrail-${GUARDRAIL}/describe.json")"
+          if [ "$VERSION" != "$DESCRIBED" ]; then
+            echo "::error::tag version ${VERSION} does not match crates/guardrail-${GUARDRAIL}/describe.json (${DESCRIBED})"
+            exit 1
+          fi
+          echo "==> Publishing greentic.guardrail-${GUARDRAIL}@${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - uses: greenticai/greentic-designer-extension-action@v2
+        with:
+          # Same pin as the other extensions in this repo; 1.3.0-research.1 is
+          # also the floor for `contributions.guardrails`, which older gtdx
+          # rejects with "Additional properties are not allowed".
+          gtdx-version: "=1.3.0-research.1"
+          manifest: crates/guardrail-${{ matrix.guardrail }}/Cargo.toml
+          store-url: ${{ vars.GREENTIC_STORE_URL }}
+          store-token: ${{ secrets.GREENTIC_STORE_TOKEN }}
+          # Authenticates the UPLOAD. The Store re-signs what it serves with
+          # the `greentic` publisher key; the action fails closed without it.
+          signing-key-pem: ${{ secrets.EXT_SIGNING_KEY_PEM }}
+          version: ${{ steps.ver.outputs.version }}
