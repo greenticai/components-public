@@ -1,0 +1,70 @@
+{
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "apiVersion": "greentic.ai/v2",
+  "kind": "DesignExtension",
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "metadata": {
+    "id": "greentic.guardrail-profanity",
+    "name": "Profanity guardrail",
+    "version": "0.1.0",
+    "summary": "Masks profane words from a built-in list plus a configurable blocklist, in either direction",
+    "description": "Masks profane words from a built-in list plus a configurable blocklist, in either direction. Implements greentic:extension-design/guardrail.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "guardrail",
+      "profanity",
+      "moderation",
+      "design-extension"
+    ]
+  },
+  "engine": {
+    "greenticDesigner": ">=1.2.0",
+    "extRuntime": "^1.2.0"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:guardrail/profanity",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "guardrail-profanity": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.guardrail-profanity",
+          "component_version": "0.1.0"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "greentic:extension-design/guardrail@0.3.0"
+      }
+    }
+  },
+  "contributions": {
+    "guardrails": [
+      {
+        "export": "greentic:extension-design/guardrail.evaluate",
+        "runtime_ref": "guardrail-profanity"
+      }
+    ]
+  }
+}

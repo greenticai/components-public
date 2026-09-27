@@ -1,0 +1,70 @@
+{
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "apiVersion": "greentic.ai/v2",
+  "kind": "DesignExtension",
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "metadata": {
+    "id": "greentic.guardrail-topic",
+    "name": "Topic / scope guardrail",
+    "version": "0.1.0",
+    "summary": "Denies inbound messages outside an operator-configured keyword allow-list (no-op until configured)",
+    "description": "Denies inbound messages outside an operator-configured keyword allow-list (no-op until configured). Implements greentic:extension-design/guardrail.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "guardrail",
+      "topic",
+      "scope",
+      "design-extension"
+    ]
+  },
+  "engine": {
+    "greenticDesigner": ">=1.2.0",
+    "extRuntime": "^1.2.0"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:guardrail/topic",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "guardrail-topic": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.guardrail-topic",
+          "component_version": "0.1.0"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "greentic:extension-design/guardrail@0.3.0"
+      }
+    }
+  },
+  "contributions": {
+    "guardrails": [
+      {
+        "export": "greentic:extension-design/guardrail.evaluate",
+        "runtime_ref": "guardrail-topic"
+      }
+    ]
+  }
+}

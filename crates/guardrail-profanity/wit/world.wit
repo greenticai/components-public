@@ -1,0 +1,10 @@
+package greentic:guardrail-profanity@0.1.0;
+
+world guardrail-profanity-extension {
+  import greentic:extension-base/types@0.2.0;
+  import greentic:extension-host/logging@0.1.0;
+
+  export greentic:extension-base/manifest@0.2.0;
+  export greentic:extension-base/lifecycle@0.2.0;
+  export greentic:extension-design/guardrail@0.3.0;
+}

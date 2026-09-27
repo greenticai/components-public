@@ -1,0 +1,3 @@
+/target
+/dist/*.gtxpack
+/dist/publish-*.json
