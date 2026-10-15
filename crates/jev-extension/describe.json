@@ -1,0 +1,96 @@
+{
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "apiVersion": "greentic.ai/v2",
+  "kind": "DesignExtension",
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "metadata": {
+    "id": "greentic.jev",
+    "name": "Decisions (Jev)",
+    "version": "0.1.0",
+    "summary": "Typed decisions with calibrated confidence from Jev (TypeSafe AI)",
+    "description": "Design extension exposing one agentic-worker tool, decide, backed by Jev, TypeSafe AI's System One model. Ask choice, score or yes/no questions about some data and get probabilities and a confidence to route on. The API key is injected by the host from a secret reference and never returned. Outbound calls are restricted to api.typesafe.ai.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greentic-biz/component-jev-ext",
+    "keywords": [
+      "jev",
+      "typesafe",
+      "decision",
+      "classification",
+      "confidence",
+      "agentic-worker",
+      "design-extension"
+    ],
+    "icon": "assets/icon.svg"
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:jev/decide",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "runtime": {
+    "memoryLimitMB": 64,
+    "permissions": {
+      "network": [
+        "https://api.typesafe.ai/*"
+      ],
+      "secrets": [
+        "secret://jev/"
+      ],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "jev-tool": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "3260ecf92026a557c9806c19683670605aea940e8402b2101cce085f86edbddf",
+          "pack_id": "greentic.jev",
+          "component_version": "0.1.0-dev"
+        },
+        "sha256": "3260ecf92026a557c9806c19683670605aea940e8402b2101cce085f86edbddf",
+        "world": "greentic:jev-extension/design-extension@1.0.0"
+      }
+    }
+  },
+  "contributions": {
+    "tools": [
+      {
+        "name": "decide",
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "runtime_ref": "jev-tool",
+        "capabilities": [
+          "agentic_worker"
+        ],
+        "description": "Ask Jev (TypeSafe AI) typed questions about some data and get choices, scores or yes/no probabilities with confidence. The API key is injected by the host and never returned.",
+        "input_schema": "{\"type\":\"object\",\"required\":[\"state\",\"questions\"],\"properties\":{\"state\":{\"description\":\"The data to evaluate: text or a JSON object.\",\"type\":[\"string\",\"object\"]},\"questions\":{\"type\":\"object\",\"description\":\"Questions keyed by an id you choose; each answer comes back under the same id. Ask one narrow question per entry.\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"type\",\"instructions\"],\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"choice\",\"score\",\"noul\"]},\"instructions\":{\"type\":\"string\",\"description\":\"What to decide.\"},\"criteria\":{\"description\":\"choice: object of option key to description (two or more). score: ordered array of level descriptions (two or more). noul: not used.\"}}}},\"model\":{\"type\":\"string\",\"description\":\"Jev model id. Defaults to jev-latest.\"}}}",
+        "secret_requirements": [
+          {
+            "key": "jev/api_key",
+            "required": true,
+            "description": "Jev (TypeSafe AI) API key used to call api.typesafe.ai. Resolved by the host from secret://jev/api_key and never returned to the model.",
+            "format": "text"
+          }
+        ]
+      }
+    ]
+  },
+  "requiredSecrets": [
+    {
+      "key": "jev/api_key",
+      "required": true,
+      "description": "Jev (TypeSafe AI) API key used to call api.typesafe.ai. Resolved by the host from secret://jev/api_key and never returned to the model.",
+      "format": "text"
+    }
+  ]
+}

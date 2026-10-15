@@ -911,6 +911,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "greentic-jev-extension"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "wit-bindgen 0.41.0",
+ "wit-bindgen-rt 0.41.0",
+]
+
+[[package]]
 name = "greentic-types"
 version = "1.1.0-dev.27943617354"
 source = "registry+https://github.com/rust-lang/crates.io-index"
