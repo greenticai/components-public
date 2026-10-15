@@ -10,9 +10,9 @@
   "metadata": {
     "id": "greentic.jev",
     "name": "Decisions (Jev)",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "summary": "Typed decisions with calibrated confidence from Jev (TypeSafe AI)",
-    "description": "Design extension exposing one agentic-worker tool, decide, backed by Jev, TypeSafe AI's System One model. Ask choice, score or yes/no questions about some data and get probabilities and a confidence to route on. The API key is injected by the host from a secret reference and never returned. Outbound calls are restricted to api.typesafe.ai.",
+    "description": "Design extension backed by Jev, TypeSafe AI's System One model. Ask choice, score or yes/no questions about some data and get probabilities and a confidence to route on. Ships the decide tool for an agentic worker and a Jev Decide node for plain flows. The API key is injected by the host from a secret reference and never returned. Outbound calls are restricted to api.typesafe.ai.",
     "author": {
       "name": "Greentic",
       "email": "team@greentic.ai"
@@ -56,10 +56,15 @@
           "file": "extension.wasm",
           "sha256": "3260ecf92026a557c9806c19683670605aea940e8402b2101cce085f86edbddf",
           "pack_id": "greentic.jev",
-          "component_version": "0.1.0-dev"
+          "component_version": "0.2.0"
         },
         "sha256": "3260ecf92026a557c9806c19683670605aea940e8402b2101cce085f86edbddf",
         "world": "greentic:jev-extension/design-extension@1.0.0"
+      },
+      "jev-node": {
+        "oci_ref": "oci://ghcr.io/greenticai/component/jev@sha256:85b51c9b3a459598ca33b20ad117cd08cd21e421ba9c855dd3fe088b349d0f12",
+        "sha256": "18d2122f881974243b1f30426c6818e8116f32e58007499c3959bc4e8f5bb321",
+        "world": "greentic:component/component-v0-v6-v0@0.6.0"
       }
     }
   },
@@ -82,6 +87,25 @@
             "format": "text"
           }
         ]
+      }
+    ],
+    "nodeTypes": [
+      {
+        "type_id": "jev.decide",
+        "label": "Jev Decide",
+        "category": "integration",
+        "icon": "gauge",
+        "color": "#7c3aed",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"state\",\"questions\"],\"properties\":{\"state\":{\"description\":\"The data to evaluate: text or a JSON object.\",\"type\":[\"string\",\"object\"]},\"questions\":{\"type\":\"object\",\"description\":\"Questions keyed by an id you choose; each answer comes back under the same id. Ask one narrow question per entry.\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"type\",\"instructions\"],\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"choice\",\"score\",\"noul\"]},\"instructions\":{\"type\":\"string\",\"description\":\"What to decide.\"},\"criteria\":{\"description\":\"choice: object of option key to description (two or more). score: ordered array of level descriptions (two or more). noul: not used.\"}}}},\"model\":{\"type\":\"string\",\"description\":\"Jev model id. Defaults to jev-latest.\"}}}",
+        "output_ports": [
+          {
+            "name": "default",
+            "label": "Next"
+          }
+        ],
+        "runtime_ref": "jev-node",
+        "operation": "decide"
       }
     ]
   },

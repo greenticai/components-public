@@ -83,3 +83,42 @@ fn input_schema_matches_the_handler_arguments() {
     properties.sort_unstable();
     assert_eq!(properties, ["model", "questions", "state"]);
 }
+
+/// The `jev.decide` flow node runs the separate `component-jev` WASM component.
+/// The designer joins a node type to its credential by looking up the tool named
+/// by the node type's `operation`, so that name MUST be the `decide` tool, or the
+/// node is deployed without `api_key` and fails at run time.
+#[test]
+fn the_flow_node_runs_the_decide_operation_from_a_digest_pinned_component() {
+    let describe = describe();
+    let node = &describe["contributions"]["nodeTypes"][0];
+    assert_eq!(node["type_id"], "jev.decide");
+    assert_eq!(node["operation"], tool_meta::DECIDE_TOOL);
+    assert_eq!(node["runtime_ref"], "jev-node");
+
+    let component = &describe["runtime"]["components"]["jev-node"];
+    let oci_ref = component["oci_ref"].as_str().expect("oci_ref is a string");
+    let digest = oci_ref
+        .strip_prefix("oci://ghcr.io/greenticai/component/jev@sha256:")
+        .expect("pinned by digest, not by tag");
+    assert_eq!(digest.len(), 64);
+    assert!(digest.bytes().all(|b| b.is_ascii_hexdigit()));
+    let wasm = component["sha256"].as_str().expect("sha256 is a string");
+    assert_eq!(wasm.len(), 64);
+    assert!(
+        wasm.bytes().any(|b| b != b'0'),
+        "sha256 must not be the placeholder"
+    );
+}
+
+/// The node's config schema accepts the same arguments as the tool, so the two
+/// surfaces cannot drift.
+#[test]
+fn the_flow_node_config_schema_matches_the_tool_input() {
+    let describe = describe();
+    let raw = describe["contributions"]["nodeTypes"][0]["config_schema"]
+        .as_str()
+        .expect("config_schema is a JSON string");
+    let node: Value = serde_json::from_str(raw).unwrap();
+    assert_eq!(node, nested_json(&decide_entry(), "input_schema").clone());
+}
