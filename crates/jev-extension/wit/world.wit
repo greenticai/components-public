@@ -1,0 +1,12 @@
+package greentic:jev-extension;
+
+world design-extension {
+  import greentic:extension-base/types@0.1.0;
+  import greentic:extension-host/logging@0.1.0;
+  import greentic:extension-host/http@0.1.0;
+  import greentic:extension-host/secrets@0.1.0;
+
+  export greentic:extension-base/manifest@0.1.0;
+  export greentic:extension-base/lifecycle@0.1.0;
+  export greentic:extension-design/tools@0.2.0;
+}
