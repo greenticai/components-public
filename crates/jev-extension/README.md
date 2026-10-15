@@ -27,6 +27,15 @@ The extension proxies `POST https://api.typesafe.ai/v1/systemone` through the ho
 capability, authenticating with `secret://jev/api_key` (never returned). Outbound calls are
 restricted to `api.typesafe.ai`.
 
+## Flow node
+
+Since 0.2.0 the extension also contributes a **Jev Decide** node (`jev.decide`) for plain flows. It runs the
+separate `component-jev` WASM component (`greenticai/component-jev`), pinned by digest in
+`runtime.components.jev-node`. Its config is the same `state` / `questions` / `model` as the tool. The
+designer injects the API key as `api_key = secret:jev/api_key`. The node returns a value, never an error:
+`{ok:true,status:"decided",answers,...}` or `{ok:false,status:"error",error:{code,message}}`, so route on `status`.
+To move the pin, publish `component-jev`, then update `oci_ref` (manifest digest) and `sha256` (wasm).
+
 ## Secret
 
 Set `jev/api_key` in the tenant secret store. Create the key in https://console.typesafe.ai/.
