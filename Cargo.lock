@@ -635,6 +635,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "email-trigger-extension"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "wit-bindgen-rt 0.35.0",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

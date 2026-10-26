@@ -1,0 +1,94 @@
+{
+  "apiVersion": "greentic.ai/v2",
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.email-trigger",
+    "name": "Email Trigger",
+    "version": "0.1.0",
+    "summary": "Start a Greentic flow when mail arrives in an IMAP mailbox",
+    "description": "Ships the email trigger nodeType (trigger contract v1, email_imap kind: greentic-start polls the mailbox and starts the flow for each new message, entering it at the node after the trigger) plus one design-time tool (validate_email_trigger). The password is never stored in the flow: the node names a secret.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "email",
+      "imap",
+      "mail",
+      "trigger",
+      "inbox",
+      "design-extension"
+    ]
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "trigger.email",
+        "label": "Email Trigger",
+        "category": "trigger",
+        "icon": "mail",
+        "color": "#0ea5e9",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"x-trigger-kind\":\"email_imap\",\"required\":[\"host\",\"username\",\"password_ref\"],\"properties\":{\"host\":{\"type\":\"string\",\"description\":\"IMAP server name, e.g. imap.gmail.com (letters, digits, dots and hyphens only).\"},\"tls\":{\"type\":\"string\",\"enum\":[\"tls\",\"starttls\"],\"default\":\"tls\",\"description\":\"tls connects encrypted from the start (port 993); starttls upgrades a plain connection (port 143). Certificates are always verified.\"},\"port\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":65535,\"description\":\"Defaults to 993 for tls and 143 for starttls.\"},\"mailbox\":{\"type\":\"string\",\"description\":\"Folder to watch. Defaults to INBOX.\"},\"username\":{\"type\":\"string\",\"description\":\"Mailbox login.\"},\"password_ref\":{\"type\":\"string\",\"description\":\"The NAME of the secret holding the mailbox password, as <provider>/<key> (e.g. email/imap_password). Never the password itself.\"},\"poll_interval_s\":{\"type\":\"integer\",\"minimum\":30,\"maximum\":86400,\"description\":\"Seconds between checks. At least 30.\"},\"search\":{\"type\":\"object\",\"description\":\"Which messages start the flow. Default: unread mail.\",\"properties\":{\"unseen\":{\"type\":\"boolean\",\"default\":true,\"description\":\"Only unread mail.\"},\"from\":{\"type\":\"string\",\"description\":\"Only mail from this address.\"},\"subject\":{\"type\":\"string\",\"description\":\"Only mail whose subject contains this text.\"}}},\"on_success\":{\"type\":\"string\",\"enum\":[\"mark_seen\",\"move\",\"none\"],\"default\":\"mark_seen\",\"description\":\"What happens to a message once the flow has been started for it. none needs search.unseen set to false.\"},\"move_to\":{\"type\":\"string\",\"description\":\"Destination folder when on_success is move.\"},\"max_messages_per_poll\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100,\"description\":\"Most messages started per check.\"},\"max_message_bytes\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":26214400,\"description\":\"Messages larger than this are skipped.\"},\"include_html\":{\"type\":\"boolean\",\"description\":\"Also hand the flow the HTML body.\"},\"attachments\":{\"type\":\"string\",\"enum\":[\"none\",\"artifacts\"],\"description\":\"artifacts stores attachments and hands the flow references.\"},\"trigger_id\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,62}$\",\"description\":\"Stable id for this trigger. Defaults to the node id; set it to keep the id when the node is renamed.\"},\"enabled\":{\"type\":\"boolean\",\"default\":true,\"description\":\"false keeps the trigger declared but polls nothing (kill switch).\"}}}",
+        "output_ports": [
+          {
+            "name": "default",
+            "label": "New mail"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "validate_email_trigger",
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "capabilities": [
+          "flow"
+        ],
+        "description": "Validate an email trigger config block (mailbox fields at the top level) and return diagnostics: the same rules the designer and the host apply, with each problem named by field.",
+        "input_schema": "{\"type\":\"object\",\"properties\":{\"node\":{\"type\":\"object\",\"description\":\"The email trigger node to validate. Only its \\\"config\\\" block is inspected.\",\"properties\":{\"config\":{\"type\":\"object\",\"x-trigger-kind\":\"email_imap\",\"required\":[\"host\",\"username\",\"password_ref\"],\"properties\":{\"host\":{\"type\":\"string\",\"description\":\"IMAP server name, e.g. imap.gmail.com (letters, digits, dots and hyphens only).\"},\"tls\":{\"type\":\"string\",\"enum\":[\"tls\",\"starttls\"],\"default\":\"tls\",\"description\":\"tls connects encrypted from the start (port 993); starttls upgrades a plain connection (port 143). Certificates are always verified.\"},\"port\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":65535,\"description\":\"Defaults to 993 for tls and 143 for starttls.\"},\"mailbox\":{\"type\":\"string\",\"description\":\"Folder to watch. Defaults to INBOX.\"},\"username\":{\"type\":\"string\",\"description\":\"Mailbox login.\"},\"password_ref\":{\"type\":\"string\",\"description\":\"The NAME of the secret holding the mailbox password, as <provider>/<key> (e.g. email/imap_password). Never the password itself.\"},\"poll_interval_s\":{\"type\":\"integer\",\"minimum\":30,\"maximum\":86400,\"description\":\"Seconds between checks. At least 30.\"},\"search\":{\"type\":\"object\",\"description\":\"Which messages start the flow. Default: unread mail.\",\"properties\":{\"unseen\":{\"type\":\"boolean\",\"default\":true,\"description\":\"Only unread mail.\"},\"from\":{\"type\":\"string\",\"description\":\"Only mail from this address.\"},\"subject\":{\"type\":\"string\",\"description\":\"Only mail whose subject contains this text.\"}}},\"on_success\":{\"type\":\"string\",\"enum\":[\"mark_seen\",\"move\",\"none\"],\"default\":\"mark_seen\",\"description\":\"What happens to a message once the flow has been started for it. none needs search.unseen set to false.\"},\"move_to\":{\"type\":\"string\",\"description\":\"Destination folder when on_success is move.\"},\"max_messages_per_poll\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100,\"description\":\"Most messages started per check.\"},\"max_message_bytes\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":26214400,\"description\":\"Messages larger than this are skipped.\"},\"include_html\":{\"type\":\"boolean\",\"description\":\"Also hand the flow the HTML body.\"},\"attachments\":{\"type\":\"string\",\"enum\":[\"none\",\"artifacts\"],\"description\":\"artifacts stores attachments and hands the flow references.\"},\"trigger_id\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,62}$\",\"description\":\"Stable id for this trigger. Defaults to the node id; set it to keep the id when the node is renamed.\"},\"enabled\":{\"type\":\"boolean\",\"default\":true,\"description\":\"false keeps the trigger declared but polls nothing (kill switch).\"}}}},\"additionalProperties\":true}},\"required\":[\"node\"]}"
+      }
+    ]
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:email-trigger/trigger-spec",
+        "version": "1.0.0"
+      },
+      {
+        "id": "greentic:email-trigger/validate",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "runtime": {
+    "memoryLimitMB": 16,
+    "permissions": {
+      "network": [],
+      "secrets": [],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "main": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.email-trigger",
+          "component_version": "0.1.0"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "main"
+      }
+    }
+  }
+}

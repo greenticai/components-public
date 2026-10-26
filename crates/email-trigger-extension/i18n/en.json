@@ -1,0 +1,23 @@
+{
+  "extension.name": "Email Trigger",
+  "extension.description": "Start a Greentic flow when mail arrives in an IMAP mailbox.",
+  "extension.summary": "The runtime checks the mailbox and starts the flow for each new message.",
+  "node.trigger.email.label": "Email Trigger",
+  "node.trigger.email.description": "Start the flow when a new email arrives.",
+  "node.trigger.email.config.host": "Mail server (IMAP)",
+  "node.trigger.email.config.tls": "Connection security",
+  "node.trigger.email.config.port": "Port",
+  "node.trigger.email.config.mailbox": "Folder",
+  "node.trigger.email.config.username": "Username",
+  "node.trigger.email.config.password_ref": "Password secret name",
+  "node.trigger.email.config.poll_interval_s": "Check every (seconds)",
+  "node.trigger.email.config.search": "Which mail",
+  "node.trigger.email.config.on_success": "After the flow starts",
+  "node.trigger.email.config.move_to": "Move to folder",
+  "node.trigger.email.config.max_messages_per_poll": "Most messages per check",
+  "node.trigger.email.config.max_message_bytes": "Largest message (bytes)",
+  "node.trigger.email.config.include_html": "Include HTML body",
+  "node.trigger.email.config.attachments": "Attachments",
+  "node.trigger.email.config.trigger_id": "Trigger ID",
+  "node.trigger.email.config.enabled": "Enabled"
+}

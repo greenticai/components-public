@@ -7,6 +7,7 @@ files=(
   crates/platform-extension/src/bindings.rs
   crates/webhook-extension/src/bindings.rs
   crates/schedule-extension/src/bindings.rs
+  crates/email-trigger-extension/src/bindings.rs
   crates/jev-extension/src/bindings.rs
   crates/guardrail-injection/src/bindings.rs
   crates/guardrail-pii/src/bindings.rs
