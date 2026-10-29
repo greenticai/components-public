@@ -3,7 +3,7 @@
 A Greentic Designer **design** extension that ships the canonical webhook trigger nodeType.
 
 - id: `greentic.webhook`
-- version: `1.3.0`
+- version: `1.3.1`
 - contract: `greentic:extension-design@0.1.0`
 - trigger contract: **v1** (`greentic.triggers.v1`)
 
