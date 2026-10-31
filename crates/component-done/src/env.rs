@@ -73,7 +73,7 @@ impl Env for HostEnv {
             body: req.body,
         };
         let options = client::RequestOptions {
-            timeout_ms: Some(req.timeout_ms.unwrap_or(30_000)),
+            timeout_ms: Some(u32::try_from(req.timeout_ms.unwrap_or(30_000)).unwrap_or(30_000)),
             allow_insecure: Some(false),
             follow_redirects: Some(false),
         };
