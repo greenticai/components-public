@@ -9,6 +9,8 @@ pub struct HttpReq {
     pub url: String,
     pub headers: Vec<(String, String)>,
     pub body: Option<Vec<u8>>,
+    /// Per-attempt timeout; `None` means the host default.
+    pub timeout_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -24,6 +26,9 @@ pub trait Env {
     fn send(&self, req: HttpReq) -> Result<Response, String>;
     fn now_ms(&self) -> u64;
     fn random(&self) -> [u8; 10];
+    /// Wait between in-run retries. The default does not wait, so a scripted
+    /// host in a test never sleeps; the real host overrides it.
+    fn sleep_ms(&self, _ms: u64) {}
 }
 
 /// Resolve `secret:NAME` through the host; anything else is a literal.
@@ -68,7 +73,7 @@ impl Env for HostEnv {
             body: req.body,
         };
         let options = client::RequestOptions {
-            timeout_ms: Some(30_000),
+            timeout_ms: Some(req.timeout_ms.unwrap_or(30_000)),
             allow_insecure: Some(false),
             follow_redirects: Some(false),
         };
@@ -86,6 +91,10 @@ impl Env for HostEnv {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| u64::try_from(d.as_millis()).unwrap_or(0))
             .unwrap_or(0)
+    }
+
+    fn sleep_ms(&self, ms: u64) {
+        std::thread::sleep(std::time::Duration::from_millis(ms));
     }
 
     fn random(&self) -> [u8; 10] {

@@ -21,6 +21,11 @@ world = "greentic:component/component-v0-v6-v0@0.6.0"
 serde.workspace = true
 serde_json.workspace = true
 greentic-types.workspace = true
+sha2 = "0.10"
+base64 = "0.22"
+subtle = "2"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = { version = "0.10", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 greentic-interfaces-guest = { workspace = true, optional = true, features = [

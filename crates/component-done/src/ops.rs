@@ -24,6 +24,9 @@ pub const ERROR_CODES: &[&str] = &[
     "unauthorised",
     "not_found",
     "unavailable",
+    "bad_token",
+    "bad_signature",
+    "link_expired",
 ];
 
 /// The Core's trigger id for `done.api.create`: served at `<base>/trigger/<id>`.
@@ -33,12 +36,12 @@ pub fn err(code: &str, message: impl std::fmt::Display) -> Value {
     json!({ "ok": false, "error": { "code": code, "message": message.to_string() } })
 }
 
-struct Creds {
-    api_key: String,
-    base: String,
+pub(crate) struct Creds {
+    pub(crate) api_key: String,
+    pub(crate) base: String,
 }
 
-fn creds(env: &dyn Env, input: &Value) -> Result<Creds, Value> {
+pub(crate) fn creds(env: &dyn Env, input: &Value) -> Result<Creds, Value> {
     let key_raw = input
         .get("api_key")
         .and_then(Value::as_str)
@@ -64,7 +67,7 @@ fn creds(env: &dyn Env, input: &Value) -> Result<Creds, Value> {
     Ok(Creds { api_key, base })
 }
 
-fn str_field<'a>(input: &'a Value, name: &str) -> Option<&'a str> {
+pub(crate) fn str_field<'a>(input: &'a Value, name: &str) -> Option<&'a str> {
     input
         .get(name)
         .and_then(Value::as_str)
@@ -76,7 +79,7 @@ fn str_field<'a>(input: &'a Value, name: &str) -> Option<&'a str> {
 /// in the body (`{"error":{"code":..}}` or `{"code":..}`); a code outside
 /// [`ERROR_CODES`] is ignored so a flow never branches on a string it was not
 /// promised. The message never includes the request or the credential.
-fn classify(resp: &Response) -> Value {
+pub(crate) fn classify(resp: &Response) -> Value {
     let body: Value = serde_json::from_slice(&resp.body).unwrap_or(Value::Null);
     let named = body
         .pointer("/error/code")
@@ -93,7 +96,12 @@ fn classify(resp: &Response) -> Value {
     err(code, format!("the Core answered {}", resp.status))
 }
 
-fn post(env: &dyn Env, url: String, api_key: &str, body: &Value) -> Result<Response, Value> {
+pub(crate) fn post(
+    env: &dyn Env,
+    url: String,
+    api_key: &str,
+    body: &Value,
+) -> Result<Response, Value> {
     let bytes =
         serde_json::to_vec(body).map_err(|e| err("unavailable", format!("encode body: {e}")))?;
     env.send(HttpReq {
@@ -104,6 +112,7 @@ fn post(env: &dyn Env, url: String, api_key: &str, body: &Value) -> Result<Respo
             ("authorization".into(), format!("Bearer {api_key}")),
         ],
         body: Some(bytes),
+        timeout_ms: None,
     })
     .map_err(|e| err("unavailable", e))
 }
