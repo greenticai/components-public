@@ -26,22 +26,52 @@ pub mod ops;
 pub mod uuid7;
 pub mod validate;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 use greentic_interfaces_guest::component_v0_6::node;
 
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[cfg_attr(not(all(target_arch = "wasm32", feature = "host")), allow(dead_code))]
 const COMPONENT_ID: &str = "done-ops";
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[cfg_attr(not(all(target_arch = "wasm32", feature = "host")), allow(dead_code))]
 const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Every operation. CROSS-REPO contract: each string appears here, in
 /// `describe()`, and as the `operation` of a node type in the extension's
 /// describe.json. The runner dispatches on it and does not default.
-pub const OPS: &[&str] = &["create_request", "read_request"];
+pub const OPS: &[&str] = &["done_api", "create_request", "read_request"];
+
+/// Which of the two behaviours a `done_api` call means.
+///
+/// The designer wires a node's credentials by joining the node type's
+/// `operation` to the tool of the same name, so both node types carry
+/// `operation: "done_api"` and must say which behaviour they want in their own
+/// config (`action`, a constant on each node type). `action` is the contract.
+/// The fallback is for a form that did not write the default: `to` or `request`
+/// can only mean create, an `id` alone can only mean read, and anything else is
+/// refused rather than guessed.
+pub fn action_of(input: &Value) -> Option<&'static str> {
+    match input.get("action").and_then(Value::as_str) {
+        Some("create_request") => Some("create_request"),
+        Some("read_request") => Some("read_request"),
+        Some(_) => None,
+        None if input.get("to").is_some() || input.get("request").is_some() => {
+            Some("create_request")
+        }
+        None if input.get("id").is_some() => Some("read_request"),
+        None => None,
+    }
+}
 
 /// Route an operation to its handler (off-wasm testable).
 pub fn dispatch(env: &dyn env::Env, op: &str, input: &Value) -> Value {
     match op {
+        "done_api" => match action_of(input) {
+            Some("create_request") => ops::create_request(env, input),
+            Some("read_request") => ops::read_request(env, input),
+            _ => ops::err(
+                "invalid_request",
+                "`action` must be create_request or read_request",
+            ),
+        },
         "create_request" => ops::create_request(env, input),
         "read_request" => ops::read_request(env, input),
         other => ops::err("invalid_request", format!("unsupported op: {other}")),
@@ -50,6 +80,7 @@ pub fn dispatch(env: &dyn env::Env, op: &str, input: &Value) -> Value {
 
 pub fn op_summary(op: &str) -> &'static str {
     match op {
+        "done_api" => "Create or read a Done request, chosen by `action`",
         "create_request" => "Ask a person to do something, tracked by Done",
         "read_request" => "Read the state of a Done request",
         _ => "Unknown operation",
@@ -88,10 +119,10 @@ pub fn decode_cbor(bytes: &[u8]) -> Result<Value, String> {
     canonical::from_cbor(bytes).map_err(|e| e.to_string())
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 struct Component;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 impl node::Guest for Component {
     fn describe() -> node::ComponentDescriptor {
         node::ComponentDescriptor {
@@ -105,12 +136,16 @@ impl node::Guest for Component {
                     name: (*op).to_string(),
                     summary: Some(op_summary(op).to_string()),
                     input: node::IoSchema {
-                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(&input_schema())),
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &input_schema(),
+                        )),
                         content_type: "application/cbor".to_string(),
                         schema_version: None,
                     },
                     output: node::IoSchema {
-                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(&output_schema())),
+                        schema: node::SchemaSource::InlineCbor(canonical_cbor_bytes(
+                            &output_schema(),
+                        )),
                         content_type: "application/cbor".to_string(),
                         schema_version: None,
                     },
@@ -138,12 +173,12 @@ impl node::Guest for Component {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 greentic_interfaces_guest::export_component_v060!(Component);
 
 /// `component-v0-v6-v0` also exports `component-qa` and `component-i18n`; a
 /// component implementing only `node` fails to build.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 mod qa_exports {
     wit_bindgen::generate!({
         inline: r#"
@@ -225,7 +260,13 @@ mod tests {
     fn every_declared_op_dispatches_to_a_real_handler() {
         for op in OPS {
             let out = dispatch(&NoNet, op, &json!({}));
-            assert!(!out["error"]["message"].as_str().unwrap_or("").contains("unsupported op"), "`{op}`");
+            assert!(
+                !out["error"]["message"]
+                    .as_str()
+                    .unwrap_or("")
+                    .contains("unsupported op"),
+                "`{op}`"
+            );
         }
     }
 
@@ -250,6 +291,30 @@ mod tests {
     fn every_error_code_the_ops_can_emit_is_a_declared_one() {
         let out = dispatch(&NoNet, "create_request", &json!({}));
         assert!(ops::ERROR_CODES.contains(&out["error"]["code"].as_str().unwrap()));
+    }
+
+    #[test]
+    fn action_wins_and_the_fallback_never_guesses() {
+        assert_eq!(
+            action_of(&json!({ "action": "read_request", "to": "x" })),
+            Some("read_request")
+        );
+        assert_eq!(action_of(&json!({ "to": "x" })), Some("create_request"));
+        assert_eq!(
+            action_of(&json!({ "request": "x", "id": "i" })),
+            Some("create_request")
+        );
+        assert_eq!(action_of(&json!({ "id": "i" })), Some("read_request"));
+        assert_eq!(action_of(&json!({ "action": "bogus", "to": "x" })), None);
+        assert_eq!(action_of(&json!({})), None);
+    }
+
+    #[test]
+    fn done_api_routes_by_action() {
+        let out = dispatch(&NoNet, "done_api", &json!({ "action": "read_request" }));
+        assert_eq!(out["error"]["code"], "unauthorised"); // reached read, stopped at credentials
+        let out = dispatch(&NoNet, "done_api", &json!({}));
+        assert_eq!(out["error"]["code"], "invalid_request");
     }
 
     #[test]

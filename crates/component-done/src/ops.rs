@@ -42,12 +42,22 @@ fn creds(env: &dyn Env, input: &Value) -> Result<Creds, Value> {
     let key_raw = input
         .get("api_key")
         .and_then(Value::as_str)
-        .ok_or_else(|| err("unauthorised", "missing `api_key` (the node wires it to the secret done/api_key)"))?;
+        .ok_or_else(|| {
+            err(
+                "unauthorised",
+                "missing `api_key` (the node wires it to the secret done/api_key)",
+            )
+        })?;
     let api_key = resolve(env, key_raw).map_err(|e| err("unauthorised", e))?;
     let base_raw = input
         .get("base_url")
         .and_then(Value::as_str)
-        .ok_or_else(|| err("unavailable", "missing `base_url` (the node wires it to the secret done/base_url)"))?;
+        .ok_or_else(|| {
+            err(
+                "unavailable",
+                "missing `base_url` (the node wires it to the secret done/base_url)",
+            )
+        })?;
     let base = resolve(env, base_raw)
         .and_then(|b| validate::base_url(&b))
         .map_err(|e| err("unavailable", e))?;
@@ -84,7 +94,8 @@ fn classify(resp: &Response) -> Value {
 }
 
 fn post(env: &dyn Env, url: String, api_key: &str, body: &Value) -> Result<Response, Value> {
-    let bytes = serde_json::to_vec(body).map_err(|e| err("unavailable", format!("encode body: {e}")))?;
+    let bytes =
+        serde_json::to_vec(body).map_err(|e| err("unavailable", format!("encode body: {e}")))?;
     env.send(HttpReq {
         method: "POST".into(),
         url,
@@ -112,7 +123,10 @@ pub fn create_request(env: &dyn Env, input: &Value) -> Value {
         return err("invalid_recipient", "`to` is required");
     };
     let Some(text) = str_field(input, "request") else {
-        return err("invalid_request", "`request` (what you are asking for) is required");
+        return err(
+            "invalid_request",
+            "`request` (what you are asking for) is required",
+        );
     };
     if text.chars().count() > validate::MAX_TEXT_CHARS {
         return err(
@@ -130,7 +144,11 @@ pub fn create_request(env: &dyn Env, input: &Value) -> Value {
     body.insert("id".into(), json!(id));
     body.insert("to".into(), json!(to));
     body.insert("text".into(), json!(text));
-    for (field, key) in [("due", "due"), ("process_id", "process_id"), ("callback_trigger", "callback_trigger")] {
+    for (field, key) in [
+        ("due", "due"),
+        ("process_id", "process_id"),
+        ("callback_trigger", "callback_trigger"),
+    ] {
         if let Some(v) = str_field(input, field) {
             body.insert(key.into(), json!(v));
         }
@@ -224,7 +242,10 @@ pub fn read_request(env: &dyn Env, input: &Value) -> Value {
     };
     // The reader replies with a JSON string. Anything else is not a state.
     let Ok(answer) = serde_json::from_str::<Value>(&text) else {
-        return err("unavailable", "the Core's reader answered with something that is not JSON");
+        return err(
+            "unavailable",
+            "the Core's reader answered with something that is not JSON",
+        );
     };
     if answer.get("found") == Some(&Value::Bool(false)) {
         return err("not_found", "no request with that id");
@@ -253,23 +274,36 @@ mod tests {
     impl Fake {
         fn new(reply: Result<Response, String>) -> Self {
             Self {
-                secrets: vec![("done/api_key", "k-123"), ("done/base_url", "https://core.example.com/")],
+                secrets: vec![
+                    ("done/api_key", "k-123"),
+                    ("done/base_url", "https://core.example.com/"),
+                ],
                 reply: RefCell::new(Some(reply)),
                 sent: RefCell::new(Vec::new()),
             }
         }
         fn answering(status: u16, body: &str) -> Self {
-            Self::new(Ok(Response { status, body: body.as_bytes().to_vec() }))
+            Self::new(Ok(Response {
+                status,
+                body: body.as_bytes().to_vec(),
+            }))
         }
     }
 
     impl Env for Fake {
         fn secret(&self, name: &str) -> Result<Option<String>, String> {
-            Ok(self.secrets.iter().find(|(n, _)| *n == name).map(|(_, v)| (*v).to_string()))
+            Ok(self
+                .secrets
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, v)| (*v).to_string()))
         }
         fn send(&self, req: HttpReq) -> Result<Response, String> {
             self.sent.borrow_mut().push(req);
-            self.reply.borrow_mut().take().unwrap_or(Err("no reply scripted".into()))
+            self.reply
+                .borrow_mut()
+                .take()
+                .unwrap_or(Err("no reply scripted".into()))
         }
         fn now_ms(&self) -> u64 {
             1_700_000_000_000
@@ -280,23 +314,41 @@ mod tests {
     }
 
     fn wired(extra: Value) -> Value {
-        let mut base = json!({ "api_key": "secret:done/api_key", "base_url": "secret:done/base_url" });
-        base.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        let mut base =
+            json!({ "api_key": "secret:done/api_key", "base_url": "secret:done/base_url" });
+        base.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
         base
     }
 
     #[test]
     fn create_sends_the_generated_id_with_the_key_and_reports_submitted() {
         let env = Fake::answering(202, "{}");
-        let out = create_request(&env, &wired(json!({ "to": "ana@acme.test", "request": "Approve the PO", "due": "2026-11-05" })));
+        let out = create_request(
+            &env,
+            &wired(
+                json!({ "to": "ana@acme.test", "request": "Approve the PO", "due": "2026-11-05" }),
+            ),
+        );
         assert_eq!(out["ok"], true);
         assert_eq!(out["state"], "submitted");
         let id = out["id"].as_str().unwrap();
-        assert!(uuid7::is_well_formed(id) && id.as_bytes()[14] == b'7', "got {id}");
+        assert!(
+            uuid7::is_well_formed(id) && id.as_bytes()[14] == b'7',
+            "got {id}"
+        );
 
         let sent = env.sent.borrow();
-        assert_eq!(sent[0].url, "https://core.example.com/trigger/done_api_create");
-        assert!(sent[0].headers.contains(&("authorization".into(), "Bearer k-123".into())));
+        assert_eq!(
+            sent[0].url,
+            "https://core.example.com/trigger/done_api_create"
+        );
+        assert!(
+            sent[0]
+                .headers
+                .contains(&("authorization".into(), "Bearer k-123".into()))
+        );
         let body: Value = serde_json::from_slice(sent[0].body.as_ref().unwrap()).unwrap();
         assert_eq!(body["id"], id);
         assert_eq!(body["text"], "Approve the PO");
@@ -307,7 +359,10 @@ mod tests {
     fn a_caller_supplied_id_is_reused_so_a_retry_is_idempotent() {
         let id = "01890a5d-ac96-774b-bcce-b302099a8057";
         let env = Fake::answering(200, "{}");
-        let out = create_request(&env, &wired(json!({ "to": "a@b.c", "request": "x", "id": id })));
+        let out = create_request(
+            &env,
+            &wired(json!({ "to": "a@b.c", "request": "x", "id": id })),
+        );
         assert_eq!(out["id"], id);
     }
 
@@ -317,8 +372,14 @@ mod tests {
         for (extra, code) in [
             (json!({ "request": "x" }), "invalid_recipient"),
             (json!({ "to": "a@b.c" }), "invalid_request"),
-            (json!({ "to": "a@b.c", "request": "x", "id": "nope" }), "invalid_request"),
-            (json!({ "to": "a@b.c", "request": "x", "context": { "token": "t" } }), "invalid_request"),
+            (
+                json!({ "to": "a@b.c", "request": "x", "id": "nope" }),
+                "invalid_request",
+            ),
+            (
+                json!({ "to": "a@b.c", "request": "x", "context": { "token": "t" } }),
+                "invalid_request",
+            ),
         ] {
             let out = create_request(&env, &wired(extra));
             assert_eq!(out["ok"], false);
@@ -333,7 +394,12 @@ mod tests {
         env.secrets.clear();
         let out = create_request(&env, &wired(json!({ "to": "a@b.c", "request": "x" })));
         assert_eq!(out["error"]["code"], "unauthorised");
-        assert!(out["error"]["message"].as_str().unwrap().contains("done/api_key"));
+        assert!(
+            out["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("done/api_key")
+        );
         assert!(env.sent.borrow().is_empty());
     }
 
@@ -372,7 +438,10 @@ mod tests {
     fn read_returns_state_and_outcome() {
         let env = Fake::answering(200, &a2a_reply(r#"{"state":"done","outcome":"done"}"#));
         let out = read_request(&env, &wired(json!({ "id": ID })));
-        assert_eq!(out, json!({ "ok": true, "id": ID, "state": "done", "outcome": "done" }));
+        assert_eq!(
+            out,
+            json!({ "ok": true, "id": ID, "state": "done", "outcome": "done" })
+        );
         let sent = env.sent.borrow();
         assert_eq!(sent[0].url, "https://core.example.com/a2a");
         let body: Value = serde_json::from_slice(sent[0].body.as_ref().unwrap()).unwrap();
@@ -385,8 +454,15 @@ mod tests {
             (a2a_reply(r#"{"found":false}"#), "not_found"),
             (a2a_reply("not json"), "unavailable"),
             (a2a_reply(r#"{"hello":1}"#), "unavailable"),
-            (json!({ "result": { "task": { "status": { "state": "TASK_STATE_WORKING" } } } }).to_string(), "unavailable"),
-            (json!({ "error": { "code": -32001 } }).to_string(), "unavailable"),
+            (
+                json!({ "result": { "task": { "status": { "state": "TASK_STATE_WORKING" } } } })
+                    .to_string(),
+                "unavailable",
+            ),
+            (
+                json!({ "error": { "code": -32001 } }).to_string(),
+                "unavailable",
+            ),
         ] {
             let env = Fake::answering(200, &reply);
             let out = read_request(&env, &wired(json!({ "id": ID })));
@@ -398,8 +474,14 @@ mod tests {
     #[test]
     fn read_validates_the_id_before_any_call() {
         let env = Fake::answering(200, "{}");
-        assert_eq!(read_request(&env, &wired(json!({})))["error"]["code"], "invalid_request");
-        assert_eq!(read_request(&env, &wired(json!({ "id": "x" })))["error"]["code"], "invalid_request");
+        assert_eq!(
+            read_request(&env, &wired(json!({})))["error"]["code"],
+            "invalid_request"
+        );
+        assert_eq!(
+            read_request(&env, &wired(json!({ "id": "x" })))["error"]["code"],
+            "invalid_request"
+        );
         assert!(env.sent.borrow().is_empty());
     }
 }

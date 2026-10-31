@@ -52,7 +52,10 @@ mod tests {
         assert_eq!(id.len(), 36);
         assert!(id.starts_with("01234567-89ab-7"), "got {id}");
         // variant nibble is 8, 9, a or b
-        assert!(matches!(id.as_bytes()[19], b'8' | b'9' | b'a' | b'b'), "got {id}");
+        assert!(
+            matches!(id.as_bytes()[19], b'8' | b'9' | b'a' | b'b'),
+            "got {id}"
+        );
         assert!(is_well_formed(&id));
     }
 

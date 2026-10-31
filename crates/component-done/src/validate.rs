@@ -18,19 +18,34 @@ const SECRET_KEY_WORDS: &[&str] = &[
     "private_key",
 ];
 
-const SECRET_VALUE_PREFIXES: &[&str] = &["bearer ", "sk-", "gts_", "gti_", "gtm_", "akia", "-----begin"];
+const SECRET_VALUE_PREFIXES: &[&str] = &[
+    "bearer ",
+    "sk-",
+    "gts_",
+    "gti_",
+    "gtm_",
+    "akia",
+    "-----begin",
+];
 
 /// Why a `context` is refused. Never carries the offending value.
 pub fn context_problem(context: &Value) -> Option<String> {
     if !context.is_object() {
         return Some("context must be a JSON object".to_string());
     }
-    let size = serde_json::to_vec(context).map(|b| b.len()).unwrap_or(usize::MAX);
+    let size = serde_json::to_vec(context)
+        .map(|b| b.len())
+        .unwrap_or(usize::MAX);
     if size > MAX_CONTEXT_BYTES {
-        return Some(format!("context is {size} bytes; the limit is {MAX_CONTEXT_BYTES}"));
+        return Some(format!(
+            "context is {size} bytes; the limit is {MAX_CONTEXT_BYTES}"
+        ));
     }
-    credential_path(context, "context")
-        .map(|path| format!("{path} looks like a credential; context is echoed in events, do not put secrets in it"))
+    credential_path(context, "context").map(|path| {
+        format!(
+            "{path} looks like a credential; context is echoed in events, do not put secrets in it"
+        )
+    })
 }
 
 fn credential_path(v: &Value, path: &str) -> Option<String> {
@@ -97,7 +112,10 @@ mod tests {
 
     #[test]
     fn base_url_is_https_only_and_trimmed() {
-        assert_eq!(base_url(" https://core.example.com/ ").unwrap(), "https://core.example.com");
+        assert_eq!(
+            base_url(" https://core.example.com/ ").unwrap(),
+            "https://core.example.com"
+        );
         assert_eq!(base_url("https://h/p/").unwrap(), "https://h/p");
         assert!(base_url("http://core.example.com").is_err());
         assert!(base_url("https://").is_err());

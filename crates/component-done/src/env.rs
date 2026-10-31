@@ -43,10 +43,10 @@ pub fn resolve(env: &dyn Env, raw: &str) -> Result<String, String> {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 pub struct HostEnv;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "host"))]
 impl Env for HostEnv {
     fn secret(&self, name: &str) -> Result<Option<String>, String> {
         use greentic_interfaces_guest::secrets_store;
