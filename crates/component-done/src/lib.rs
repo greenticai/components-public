@@ -48,6 +48,7 @@ pub const OPS: &[&str] = &[
     "create_request",
     "read_request",
     "verify_token",
+    "verify_card_sig",
     "fanout_reminders",
     "plan_reminder",
     "deliver_reminder",
@@ -95,6 +96,7 @@ pub fn dispatch(env: &dyn env::Env, op: &str, input: &Value) -> Value {
         "create_request" => ops::create_request(env, input),
         "read_request" => ops::read_request(env, input),
         "verify_token" => token::verify_token(env, input),
+        "verify_card_sig" => token::verify_card_sig(env, input),
         "fanout_reminders" => remind::fanout_reminders(env, input),
         "plan_reminder" => remind::plan_reminder(env, input),
         "deliver_reminder" => remind::deliver_reminder(env, input),
@@ -113,7 +115,10 @@ pub fn op_summary(op: &str) -> &'static str {
         "done_api" => "Create or read a Done request, chosen by `action`",
         "create_request" => "Ask a person to do something, tracked by Done",
         "read_request" => "Read the state of a Done request",
-        "verify_token" => "Verify a signed email action link and report its fields",
+        "verify_token" => {
+            "Verify a signed email action link and report its fields; the nonce is a canonical UUID"
+        }
+        "verify_card_sig" => "Verify the signature on a card button's submit data",
         "fanout_reminders" => "Post one reminder firing per due reminder",
         "plan_reminder" => "Decide whether to send a reminder now and when the next is due",
         "deliver_reminder" => "Send a reminder to its recipient through the Core",

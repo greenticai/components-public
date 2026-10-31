@@ -4,7 +4,8 @@
 //! `token = b64url(payload_json) "." b64url(mac)`, no padding, with
 //! `mac = HMAC-SHA256(done/link_key, "v1\n" d "\n" a "\n" r "\n" e "\n" n)`.
 //!
-//! This op is only the cryptographic half. It reports the nonce; the SINGLE USE
+//! This op is only the cryptographic half. It reports the nonce (a canonical
+//! lowercase UUID, so the flow can use it as the SoR event id); the SINGLE USE
 //! rule (D6) belongs to the flow, which looks the nonce up in the SoR and appends
 //! it only after the transition succeeds, so a refused transition never burns a
 //! link. Nothing here panics: every malformed input is a value.
@@ -157,6 +158,55 @@ pub fn check(key: &[u8], token: &str, now_s: u64) -> Result<Link, Refusal> {
     Ok(link)
 }
 
+/// `verify_card_sig`: check the signature on a card button's submit data
+/// (`render_card` writes it as `sig`).
+///
+/// In: `{done_id, action, recipient, sig, action_key: "secret:done/action_key"}`.
+/// Out: `{ok:true, done_id, action, recipient}` or `{ok:false, error:{code,
+/// message}}` with `bad_signature | invalid_request | unauthorised`.
+/// `sig` is `hex(HMAC-SHA256(action_key, "v1\n"+done_id+"\n"+action+"\n"+recipient))`,
+/// compared in constant time. Like `verify_token` it has no expiry and no single
+/// use: those belong to the flow.
+pub fn verify_card_sig(env: &dyn Env, input: &Value) -> Value {
+    let bad = |m: &'static str| err("invalid_request", m);
+    let Some(done_id) = str_field(input, "done_id") else {
+        return bad("`done_id` is required");
+    };
+    let Some(action) = str_field(input, "action") else {
+        return bad("`action` is required");
+    };
+    let Some(recipient) = str_field(input, "recipient") else {
+        return bad("`recipient` is required");
+    };
+    let Some(sig) = str_field(input, "sig") else {
+        return bad("`sig` is required");
+    };
+    if !uuid7::is_well_formed(done_id) {
+        return bad("`done_id` must be a uuid");
+    }
+    if !ACTIONS.contains(&action) {
+        return bad("`action` is not a known action");
+    }
+    if recipient.is_empty() || recipient.contains('\n') {
+        return bad("`recipient` is empty or contains a line break");
+    }
+    let Some(raw_key) = str_field(input, "action_key") else {
+        return err(
+            "unauthorised",
+            "missing `action_key` (wire it to the secret done/action_key)",
+        );
+    };
+    let key = match mac::secret_by_name(env, raw_key) {
+        Ok(k) => k,
+        Err(e) => return err("unauthorised", e),
+    };
+    let expected = crate::card::action_sig(key.as_bytes(), done_id, action, recipient);
+    if !mac::ct_eq(expected.as_bytes(), sig.to_ascii_lowercase().as_bytes()) {
+        return err("bad_signature", "the action's signature does not match");
+    }
+    json!({ "ok": true, "done_id": done_id, "action": action, "recipient": recipient })
+}
+
 pub fn verify_token(env: &dyn Env, input: &Value) -> Value {
     let Some(token) = str_field(input, "token") else {
         return err("invalid_request", "`token` is required");
@@ -191,6 +241,7 @@ pub(crate) mod tests {
 
     pub const ID: &str = "01890a5d-ac96-774b-bcce-b302099a8057";
     const KEY: &str = "link-key-123";
+    const NONCE: &str = "3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b";
 
     pub struct Clock {
         pub secrets: Vec<(&'static str, &'static str)>,
@@ -230,7 +281,7 @@ pub(crate) mod tests {
             action: action.into(),
             recipient: "person-1".into(),
             expires_at: e,
-            nonce: "bm9uY2Ux".into(),
+            nonce: NONCE.into(),
         }
     }
 
@@ -257,7 +308,7 @@ pub(crate) mod tests {
         assert_eq!(
             out,
             json!({"ok":true,"done_id":ID,"action":"accept","recipient":"person-1",
-                   "expires_at":5000,"nonce":"bm9uY2Ux"})
+                   "expires_at":5000,"nonce":NONCE})
         );
     }
 
@@ -352,5 +403,88 @@ pub(crate) mod tests {
             verify_token(&env(1_000), &json!({ "token": t }))["error"]["code"],
             "unauthorised"
         );
+    }
+
+    fn card_env() -> Clock {
+        Clock {
+            secrets: vec![("done/action_key", "action-key")],
+            now_s: 0,
+        }
+    }
+
+    fn card_input(action: &str, recipient: &str, sig: &str) -> Value {
+        json!({"done_id": ID, "action": action, "recipient": recipient, "sig": sig,
+               "action_key": "secret:done/action_key"})
+    }
+
+    fn good_sig(action: &str, recipient: &str) -> String {
+        crate::card::action_sig(b"action-key", ID, action, recipient)
+    }
+
+    #[test]
+    fn a_genuine_card_sig_verifies_and_echoes_its_fields() {
+        let sig = good_sig("accept", "person-1");
+        let out = verify_card_sig(&card_env(), &card_input("accept", "person-1", &sig));
+        assert_eq!(
+            out,
+            json!({"ok":true,"done_id":ID,"action":"accept","recipient":"person-1"})
+        );
+        let upper = sig.to_ascii_uppercase();
+        assert_eq!(
+            verify_card_sig(&card_env(), &card_input("accept", "person-1", &upper))["ok"],
+            true
+        );
+    }
+
+    #[test]
+    fn a_wrong_or_tampered_card_sig_is_bad_signature() {
+        let sig = good_sig("accept", "person-1");
+        for i in [
+            card_input("accept", "person-1", &"0".repeat(64)),
+            card_input("accept", "person-1", "short"),
+            card_input("done", "person-1", &sig),
+            card_input("accept", "person-2", &sig),
+        ] {
+            let out = verify_card_sig(&card_env(), &i);
+            assert_eq!(out["error"]["code"], "bad_signature", "{i}");
+        }
+    }
+
+    #[test]
+    fn newline_injection_and_bad_shapes_are_invalid_requests() {
+        // "person-1\naccept" would collide with a different field split.
+        let sig = good_sig("accept", "person-1\nx");
+        for i in [
+            card_input("accept", "person-1\nx", &sig),
+            card_input("accept", "", &sig),
+            card_input("delete", "person-1", &sig),
+            json!({"done_id":"not-a-uuid","action":"accept","recipient":"p","sig":"s",
+                   "action_key":"secret:done/action_key"}),
+            json!({"done_id":ID,"action":"accept","recipient":"p"}),
+            json!({}),
+        ] {
+            let out = verify_card_sig(&card_env(), &i);
+            assert_eq!(out["error"]["code"], "invalid_request", "{i}");
+        }
+    }
+
+    #[test]
+    fn the_card_key_must_be_a_set_secret_reference() {
+        let sig = good_sig("accept", "person-1");
+        let mut literal = card_input("accept", "person-1", &sig);
+        literal["action_key"] = json!("action-key");
+        let out = verify_card_sig(&card_env(), &literal);
+        assert_eq!(out["error"]["code"], "unauthorised");
+        assert!(!out.to_string().contains("action-key"));
+        let mut missing = literal.clone();
+        missing.as_object_mut().unwrap().remove("action_key");
+        assert_eq!(
+            verify_card_sig(&card_env(), &missing)["error"]["code"],
+            "unauthorised"
+        );
+        let mut unset = card_env();
+        unset.secrets.clear();
+        let i = card_input("accept", "person-1", &sig);
+        assert_eq!(verify_card_sig(&unset, &i)["error"]["code"], "unauthorised");
     }
 }

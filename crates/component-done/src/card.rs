@@ -388,12 +388,13 @@ pub fn render_card(env: &dyn Env, input: &Value) -> Value {
     let expires = (env.now_ms() / 1000).saturating_add(token::DEFAULT_TTL_S);
     let mut links = Vec::new();
     for a in &acts {
-        // One fresh nonce per link: 16 bytes from two entropy reads.
+        // One fresh nonce per link: 16 random bytes from two entropy reads.
         let (r1, r2) = (env.random(), env.random());
         let mut nonce = [0u8; 16];
         nonce[..10].copy_from_slice(&r1);
         nonce[10..].copy_from_slice(&r2[..6]);
-        let n = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, nonce);
+        // A canonical UUID, because the SoR stores the nonce as an event id.
+        let n = uuid7::format_v4(nonce);
         let Some(t) = token::issue(&link_key, done_id, a.id, recipient, expires, &n) else {
             return err("invalid_request", "could not sign a link for these fields");
         };
@@ -598,10 +599,34 @@ mod tests {
                 (ID, "person-1")
             );
             assert_eq!(link.expires_at, 1_000 + token::DEFAULT_TTL_S);
+            assert!(uuid7::is_well_formed(&link.nonce), "{}", link.nonce);
+            assert_eq!(link.nonce, link.nonce.to_ascii_lowercase());
+            assert_eq!(&link.nonce[14..15], "4", "version nibble");
+            assert!(matches!(&link.nonce[19..20], "8" | "9" | "a" | "b"));
             seen.push(link.action);
         }
         assert_eq!(seen, ["accept", "cant_do"]);
         assert_eq!(out["subject"], "Maarten asked you for something");
+    }
+
+    #[test]
+    fn verify_card_sig_accepts_exactly_what_render_card_signs() {
+        let out = render_card(&Keys, &input("request", "teams", "submitted"));
+        for a in out["payload"]["actions"].as_array().unwrap() {
+            let d = &a["data"];
+            let v = json!({
+                "done_id": d["done_id"], "action": d["action"], "recipient": "person-1",
+                "sig": d["sig"], "action_key": "secret:done/action_key",
+            });
+            let res = token::verify_card_sig(&Keys, &v);
+            assert_eq!(res["ok"], true, "{res}");
+            let mut other = v.clone();
+            other["recipient"] = json!("person-2");
+            assert_eq!(
+                token::verify_card_sig(&Keys, &other)["error"]["code"],
+                "bad_signature"
+            );
+        }
     }
 
     #[test]

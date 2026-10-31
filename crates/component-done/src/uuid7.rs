@@ -30,6 +30,23 @@ pub fn format(unix_ms: u64, rand: [u8; 10]) -> String {
     )
 }
 
+/// Format 16 random bytes as a canonical lowercase UUID v4 (RFC 9562): the
+/// version nibble is 4 and the variant bits are `10`. Used for single-use link
+/// nonces, which the SoR stores as an event id (a uuid).
+pub fn format_v4(mut b: [u8; 16]) -> String {
+    b[6] = (b[6] & 0x0F) | 0x40; // version 4
+    b[8] = (b[8] & 0x3F) | 0x80; // variant 10
+    let hex: String = b.iter().map(|x| format!("{x:02x}")).collect();
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
+}
+
 /// True for a lowercase or uppercase 8-4-4-4-12 hex id. Version is not checked:
 /// a caller may pass an id generated elsewhere, and the Core is the authority.
 pub fn is_well_formed(id: &str) -> bool {
@@ -45,6 +62,15 @@ pub fn is_well_formed(id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_v4_id_is_canonical_with_version_and_variant_bits() {
+        let id = format_v4([0xff; 16]);
+        assert_eq!(id, "ffffffff-ffff-4fff-bfff-ffffffffffff");
+        assert!(is_well_formed(&id));
+        let id = format_v4([0; 16]);
+        assert_eq!(id, "00000000-0000-4000-8000-000000000000");
+    }
 
     #[test]
     fn the_layout_carries_version_variant_and_time() {
