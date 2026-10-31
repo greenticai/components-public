@@ -1,0 +1,54 @@
+# Ask and react, flow A: something starts it, it asks a person, it ends.
+# Nothing waits here. The answer arrives in flow B as a Done event.
+id: greentic.done.ask-and-react.ask
+name: "Ask and react - ask"
+description: "Receives a call, asks a person to do something through Done, and ends. Pair with 'Ask and react - react'."
+version: "0.1.0"
+category: automation
+intent_graph:
+  schema_version: "0.1"
+  flow_id: ask_and_react_ask
+  flow_type: event
+  title: "Ask a person"
+  entry: start
+  nodes:
+    - id: start
+      capability: trigger
+      params:
+        trigger_id: ask_and_react_start
+        verify:
+          scheme: hmac-sha256
+          header: X-Hub-Signature-256
+          prefix: "sha256="
+          encoding: hex
+          secret_ref: ask_and_react/signing_key
+    - id: ask
+      capability: done.create_request
+      params:
+        to: "{{entry.webhook.body.to}}"
+        request: "{{entry.webhook.body.request}}"
+        due: "{{entry.webhook.body.due}}"
+        # Stable id: a redelivered call creates the request once.
+        id: "{{entry.webhook.body.id}}"
+        # Flow B is the trigger_id below. Keep them equal.
+        callback_trigger: ask_and_react_events
+        # Flow B is stateless; everything it needs rides here.
+        context:
+          source: ask_and_react
+  routing:
+    - from: start
+      event: default
+      to: ask
+    - from: ask
+      event: on_complete
+      to:
+        end: true
+    - from: ask
+      event: on_error
+      to:
+        end: true
+defaults:
+  channels: []
+  skin:
+    brand:
+      primary: "#0d9488"

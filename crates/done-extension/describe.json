@@ -1,0 +1,161 @@
+{
+  "apiVersion": "greentic.ai/v2",
+  "$schema": "https://store.greentic.cloud/schemas/describe-v2.json",
+  "kind": "DesignExtension",
+  "metadata": {
+    "id": "greentic.done",
+    "name": "Done @ Greentic",
+    "version": "0.1.0",
+    "summary": "Ask a person to do something and react when they answer",
+    "description": "Flow steps Create request and Read request, the Done event trigger, and the done_api tool for agentic workers, all backed by a Done Core deployed from Greentic. A request is created with a caller-generated UUID v7 over HTTPS; the outcome arrives later as a signed event, so a flow reacts in a second flow and never parks while a person decides.",
+    "author": {
+      "name": "Greentic",
+      "email": "team@greentic.ai"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/greenticai/components-public",
+    "keywords": [
+      "done",
+      "requests",
+      "approval",
+      "trigger",
+      "design-extension"
+    ]
+  },
+  "contributions": {
+    "nodeTypes": [
+      {
+        "type_id": "done.create_request",
+        "label": "Create request",
+        "category": "integration",
+        "icon": "send",
+        "color": "#0d9488",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"to\",\"request\"],\"properties\":{\"action\":{\"type\":\"string\",\"const\":\"create_request\",\"default\":\"create_request\",\"description\":\"Which Done operation this step runs. Fixed by the step type; do not change.\"},\"to\":{\"type\":\"string\",\"description\":\"Who is asked: an email address or a Done person id. Templates such as {{entry.webhook.body.to}} are allowed.\"},\"request\":{\"type\":\"string\",\"maxLength\":8000,\"description\":\"What you are asking them to do, in plain words.\"},\"due\":{\"type\":\"string\",\"description\":\"Optional due date, YYYY-MM-DD or RFC 3339.\"},\"process_id\":{\"type\":\"string\",\"description\":\"Optional Done process this request belongs to.\"},\"callback_trigger\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,62}$\",\"description\":\"Optional trigger_id of the done.event flow that reacts when the request changes.\"},\"context\":{\"type\":\"object\",\"additionalProperties\":true,\"description\":\"Small JSON (4 KiB max) echoed back in every event so the reacting flow needs no memory. Never put credentials in it.\"},\"id\":{\"type\":\"string\",\"description\":\"Optional request id (a UUID). Set it from something stable, such as {{entry.webhook.body.id}}, so a retried run creates the request once. Left empty, every run creates a new request.\"},\"output\":{\"type\":\"string\",\"description\":\"Optional state key the result {ok, id, state} is stored under.\"}}}",
+        "output_ports": [
+          {
+            "name": "on_complete",
+            "label": "Created"
+          },
+          {
+            "name": "on_error",
+            "label": "Failed"
+          }
+        ],
+        "runtime_ref": "done-node",
+        "operation": "done_api"
+      },
+      {
+        "type_id": "done.read_request",
+        "label": "Read request",
+        "category": "integration",
+        "icon": "search",
+        "color": "#0d9488",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"action\":{\"type\":\"string\",\"const\":\"read_request\",\"default\":\"read_request\",\"description\":\"Which Done operation this step runs. Fixed by the step type; do not change.\"},\"id\":{\"type\":\"string\",\"description\":\"The request id returned by Create request.\"},\"output\":{\"type\":\"string\",\"description\":\"Optional state key the result {ok, id, state, outcome} is stored under.\"}}}",
+        "output_ports": [
+          {
+            "name": "on_complete",
+            "label": "Read"
+          },
+          {
+            "name": "on_error",
+            "label": "Failed"
+          }
+        ],
+        "runtime_ref": "done-node",
+        "operation": "done_api"
+      },
+      {
+        "type_id": "done.event",
+        "label": "Done event",
+        "category": "trigger",
+        "icon": "webhook",
+        "color": "#0d9488",
+        "complexity": "simple",
+        "config_schema": "{\"type\":\"object\",\"x-trigger-kind\":\"webhook\",\"required\":[\"verify\"],\"properties\":{\"trigger_id\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,62}$\",\"description\":\"URL slug: served at <deployment-prefix>/trigger/<trigger_id>. Must match the callback_trigger of the Create request step this flow reacts to.\"},\"enabled\":{\"type\":\"boolean\",\"default\":true,\"description\":\"false keeps the URL reserved but fires nothing (kill switch).\"},\"methods\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"POST\"]},\"default\":[\"POST\"],\"description\":\"Done delivers events with POST.\"},\"verify\":{\"type\":\"object\",\"required\":[\"scheme\"],\"description\":\"Every Done event is HMAC-signed; unsigned events are not accepted.\",\"default\":{\"scheme\":\"hmac-sha256\",\"header\":\"X-Done-Signature\",\"prefix\":\"sha256=\",\"encoding\":\"hex\",\"secret_ref\":\"done/webhook_secret\"},\"properties\":{\"scheme\":{\"type\":\"string\",\"enum\":[\"hmac-sha256\"],\"default\":\"hmac-sha256\"},\"header\":{\"type\":\"string\",\"default\":\"X-Done-Signature\"},\"prefix\":{\"type\":\"string\",\"default\":\"sha256=\"},\"encoding\":{\"type\":\"string\",\"enum\":[\"hex\"],\"default\":\"hex\"},\"secret_ref\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9_.-]*$\",\"default\":\"done/webhook_secret\",\"description\":\"NAME of the secret as <provider>/<key> - never the value. The value is entered in Setup.\"}}},\"idempotency\":{\"type\":\"object\",\"description\":\"Suppress a redelivered event (Done delivers at least once).\",\"default\":{\"key\":\"body.event.id\",\"ttl_s\":86400},\"properties\":{\"key\":{\"type\":\"string\",\"default\":\"body.event.id\"},\"ttl_s\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":604800,\"default\":86400}}},\"max_body_bytes\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":5242880,\"default\":262144},\"session\":{\"type\":\"object\",\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"per_run\",\"per_key\"],\"default\":\"per_run\"},\"key\":{\"type\":\"string\"}}},\"limits\":{\"type\":\"object\",\"properties\":{\"max_concurrency\":{\"type\":\"integer\",\"minimum\":1,\"default\":8},\"max_firings_per_hour\":{\"type\":\"integer\",\"minimum\":1}}}}}",
+        "output_ports": [
+          {
+            "name": "default",
+            "label": "Event"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "done_api",
+        "export": "greentic:extension-design/tools.invoke-tool",
+        "runtime_ref": "done-tool",
+        "capabilities": [
+          "agentic_worker"
+        ],
+        "description": "Ask a person to do something through Done and track the answer. create_request returns the request id immediately; the real outcome arrives later, read it with read_request. The credential is injected by the host and never returned.",
+        "input_schema": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"create_request\",\"read_request\"],\"description\":\"create_request asks a person to do something; read_request returns the state of an existing request.\"},\"to\":{\"type\":\"string\",\"description\":\"create_request: who is asked (an email address or a Done person id).\"},\"request\":{\"type\":\"string\",\"description\":\"create_request: what is being asked, in plain words.\"},\"due\":{\"type\":\"string\",\"description\":\"create_request: optional due date, YYYY-MM-DD or RFC 3339.\"},\"process_id\":{\"type\":\"string\",\"description\":\"create_request: optional Done process this request belongs to.\"},\"callback_trigger\":{\"type\":\"string\",\"description\":\"create_request: optional trigger id to notify when the request changes.\"},\"context\":{\"type\":\"object\",\"additionalProperties\":true,\"description\":\"create_request: small JSON echoed back in events (4 KiB max). Never put credentials in it.\"},\"id\":{\"type\":\"string\",\"description\":\"read_request: the request id returned by create_request. create_request: optional, supply the same id on a retry so the request is created once.\"}}}",
+        "secret_requirements": [
+          {
+            "key": "done/api_key",
+            "required": true,
+            "description": "Bearer key for the Done Core API. Resolved by the host from secret://done/api_key and never returned to the model.",
+            "format": "text"
+          },
+          {
+            "key": "done/base_url",
+            "required": true,
+            "description": "HTTPS origin of the Done Core deployment, for example https://core.example.com. Resolved by the host from secret://done/base_url.",
+            "format": "text"
+          },
+          {
+            "key": "done/webhook_secret",
+            "required": false,
+            "description": "Shared secret that signs Done events (HMAC-SHA256, header X-Done-Signature). Needed only by flows that use the Done event trigger.",
+            "format": "text"
+          }
+        ]
+      }
+    ]
+  },
+  "capabilities": {
+    "offered": [
+      {
+        "id": "greentic:done/request",
+        "version": "1.0.0"
+      }
+    ],
+    "required": []
+  },
+  "compat": {
+    "min_designer_version": ">=1.2.0",
+    "min_runner_version": "^0.12.0",
+    "contract_version": "1.2.0"
+  },
+  "runtime": {
+    "memoryLimitMB": 64,
+    "permissions": {
+      "network": [
+        "https://*/*"
+      ],
+      "secrets": [
+        "secret://done/"
+      ],
+      "callExtensionKinds": []
+    },
+    "components": {
+      "done-tool": {
+        "gtpack": {
+          "file": "extension.wasm",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pack_id": "greentic.done",
+          "component_version": "0.1.0"
+        },
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "main"
+      },
+      "done-node": {
+        "oci_ref": "oci://ghcr.io/greenticai/component/component-done@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "world": "greentic:component/component-v0-v6-v0@0.6.0"
+      }
+    }
+  }
+}
