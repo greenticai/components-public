@@ -20,12 +20,14 @@ use greentic_types::cbor::canonical;
 
 pub use describe::{SchemaIr, input_schema, output_schema};
 
+pub mod card;
 mod describe;
 pub mod env;
 pub mod events;
 pub mod mac;
 pub mod ops;
 pub mod remind;
+pub mod send;
 pub mod token;
 pub mod uuid7;
 pub mod validate;
@@ -50,6 +52,11 @@ pub const OPS: &[&str] = &[
     "plan_reminder",
     "deliver_reminder",
     "deliver_events",
+    "pick_channel",
+    "render_card",
+    "send_card",
+    "notify_text",
+    "send_text",
 ];
 
 /// Which of the two behaviours a `done_api` call means.
@@ -92,6 +99,11 @@ pub fn dispatch(env: &dyn env::Env, op: &str, input: &Value) -> Value {
         "plan_reminder" => remind::plan_reminder(env, input),
         "deliver_reminder" => remind::deliver_reminder(env, input),
         "deliver_events" => events::deliver_events(env, input),
+        "pick_channel" => card::pick_channel(input),
+        "render_card" => card::render_card(env, input),
+        "send_card" => send::send_card(env, input),
+        "notify_text" => card::notify_text(input),
+        "send_text" => send::send_text(env, input),
         other => ops::err("invalid_request", format!("unsupported op: {other}")),
     }
 }
@@ -106,6 +118,13 @@ pub fn op_summary(op: &str) -> &'static str {
         "plan_reminder" => "Decide whether to send a reminder now and when the next is due",
         "deliver_reminder" => "Send a reminder to its recipient through the Core",
         "deliver_events" => "Deliver a signed Done event to every subscriber",
+        "pick_channel" => "Choose the channel and address to reach a person (Teams, Webex, email)",
+        "render_card" => {
+            "Render a request card or permission prompt for a channel, with signed actions"
+        }
+        "send_card" => "Send a rendered card to a person through the Core",
+        "notify_text" => "Word the notice a requester gets about the recipient's action",
+        "send_text" => "Send a plain-text notice to a person through the Core",
         _ => "Unknown operation",
     }
 }
@@ -303,7 +322,11 @@ mod tests {
     #[test]
     fn an_unknown_op_and_an_empty_payload_report_instead_of_panicking() {
         assert_eq!(dispatch(&NoNet, "nope", &json!({}))["ok"], false);
-        for op in OPS {
+        // These two are pure and answer an empty payload with a normal value.
+        for op in OPS
+            .iter()
+            .filter(|o| !["pick_channel", "notify_text"].contains(o))
+        {
             let out = dispatch(&NoNet, op, &json!({}));
             assert_eq!(out["ok"], false);
             assert!(out["error"]["code"].is_string());

@@ -2,7 +2,7 @@
 //! `docs/done/channels/email-link-format.md`).
 //!
 //! `token = b64url(payload_json) "." b64url(mac)`, no padding, with
-//! `mac = HMAC-SHA256(done/email_link_key, "v1\n" d "\n" a "\n" r "\n" e "\n" n)`.
+//! `mac = HMAC-SHA256(done/link_key, "v1\n" d "\n" a "\n" r "\n" e "\n" n)`.
 //!
 //! This op is only the cryptographic half. It reports the nonce; the SINGLE USE
 //! rule (D6) belongs to the flow, which looks the nonce up in the SoR and appends
@@ -22,8 +22,18 @@ use crate::uuid7;
 pub const SKEW_S: u64 = 60;
 /// Upper bound on a token's length; a real one is well under 400 bytes.
 pub const MAX_TOKEN_LEN: usize = 2048;
-/// The actions a link may carry (spec 3.3 names).
-pub const ACTIONS: &[&str] = &["accept", "done", "more_time", "cant_do"];
+/// The actions a link may carry: the recipient's four (spec 3.3 names) and the
+/// two answers of a permission prompt.
+pub const ACTIONS: &[&str] = &[
+    "accept",
+    "done",
+    "more_time",
+    "cant_do",
+    "allow_sender",
+    "deny_sender",
+];
+/// Default life of a link: 72 hours (email-link-format.md).
+pub const DEFAULT_TTL_S: u64 = 72 * 3600;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Link {
@@ -92,6 +102,44 @@ fn message(l: &Link) -> String {
     )
 }
 
+/// Mint a link token. `None` when a field cannot be signed (empty, contains the
+/// separator, unknown action), so a caller never emits a token `check` refuses.
+pub fn issue(
+    key: &[u8],
+    done_id: &str,
+    action: &str,
+    recipient: &str,
+    expires_at: u64,
+    nonce: &str,
+) -> Option<String> {
+    let link = Link {
+        done_id: done_id.to_string(),
+        action: action.to_string(),
+        recipient: recipient.to_string(),
+        expires_at,
+        nonce: nonce.to_string(),
+    };
+    let ok = |s: &str| !s.is_empty() && !s.contains('\n');
+    if !ok(done_id)
+        || !ok(recipient)
+        || !ok(nonce)
+        || !uuid7::is_well_formed(done_id)
+        || !ACTIONS.contains(&action)
+    {
+        return None;
+    }
+    let payload = json!({
+        "v": 1, "d": link.done_id, "a": link.action, "r": link.recipient,
+        "e": link.expires_at, "n": link.nonce,
+    });
+    let mac = mac::hmac_sha256(key, message(&link).as_bytes());
+    Some(format!(
+        "{}.{}",
+        URL_SAFE_NO_PAD.encode(payload.to_string()),
+        URL_SAFE_NO_PAD.encode(mac)
+    ))
+}
+
 /// Parse, authenticate, then check expiry. The MAC is checked BEFORE the expiry
 /// so a forged token cannot learn anything from which refusal it gets.
 pub fn check(key: &[u8], token: &str, now_s: u64) -> Result<Link, Refusal> {
@@ -113,10 +161,10 @@ pub fn verify_token(env: &dyn Env, input: &Value) -> Value {
     let Some(token) = str_field(input, "token") else {
         return err("invalid_request", "`token` is required");
     };
-    let Some(raw_key) = str_field(input, "email_link_key") else {
+    let Some(raw_key) = str_field(input, "link_key") else {
         return err(
             "unauthorised",
-            "missing `email_link_key` (wire it to the secret done/email_link_key)",
+            "missing `link_key` (wire it to the secret done/link_key)",
         );
     };
     let key = match mac::secret_by_name(env, raw_key) {
@@ -194,13 +242,13 @@ pub(crate) mod tests {
 
     fn env(now_s: u64) -> Clock {
         Clock {
-            secrets: vec![("done/email_link_key", KEY)],
+            secrets: vec![("done/link_key", KEY)],
             now_s,
         }
     }
 
     fn input(token: &str) -> Value {
-        json!({ "token": token, "email_link_key": "secret:done/email_link_key" })
+        json!({ "token": token, "link_key": "secret:done/link_key" })
     }
 
     #[test]
@@ -280,7 +328,7 @@ pub(crate) mod tests {
     #[test]
     fn the_key_must_be_a_secret_reference_that_is_set() {
         let t = mint(KEY, "accept", 5_000);
-        let literal = json!({ "token": t, "email_link_key": KEY });
+        let literal = json!({ "token": t, "link_key": KEY });
         let out = verify_token(&env(1_000), &literal);
         assert_eq!(out["error"]["code"], "unauthorised");
         assert!(!out.to_string().contains(KEY));
@@ -293,7 +341,7 @@ pub(crate) mod tests {
             out["error"]["message"]
                 .as_str()
                 .unwrap()
-                .contains("done/email_link_key")
+                .contains("done/link_key")
         );
 
         assert_eq!(
