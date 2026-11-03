@@ -1,0 +1,12 @@
+{
+  "done.schema.input.title": "Done request input",
+  "done.schema.input.description": "Arguments for a Done operation. The credential and the Core address are wired from the done/api_key and done/base_url secrets.",
+  "done.schema.input.api_key.title": "API key",
+  "done.schema.input.api_key.description": "Bearer key for the Done Core. A secret reference, never a value.",
+  "done.schema.output.title": "Done result",
+  "done.schema.output.description": "{ok, id, state} on success, {ok: false, error: {code, message}} on failure.",
+  "done.schema.output.ok.title": "OK",
+  "done.schema.output.ok.description": "False when the operation failed; route on this.",
+  "done.schema.output.error.title": "Error",
+  "done.schema.output.error.description": "A stable code (permission_denied, blocked, rate_limited, invalid_recipient, invalid_request, unauthorised, not_found, unavailable) and a message."
+}

@@ -1,0 +1,52 @@
+# Ask and react, flow B: a Done event starts it and it branches on what happened.
+# Replace the empty arms with the next steps of your process.
+id: greentic.done.ask-and-react.react
+name: "Ask and react - react"
+description: "Starts on a signed Done event and continues the process: accepted, completed, can't do, overdue, more time asked."
+version: "0.1.0"
+category: automation
+intent_graph:
+  schema_version: "0.1"
+  flow_id: ask_and_react_react
+  flow_type: event
+  title: "React to the answer"
+  entry: event
+  nodes:
+    - id: event
+      capability: done.event
+      params:
+        # Must equal callback_trigger in flow A.
+        trigger_id: ask_and_react_events
+    - id: which
+      capability: conditional_branch
+      params: {}
+    - id: completed
+      capability: done.read_request
+      params:
+        id: "{{entry.webhook.body.done.id}}"
+  routing:
+    - from: event
+      event: default
+      to: which
+    - from: which
+      event: completed
+      condition: "{{entry.webhook.body.event}} == done.completed"
+      to: completed
+    - from: which
+      event: other
+      condition: "{{entry.webhook.body.event}} != done.completed"
+      to:
+        end: true
+    - from: completed
+      event: on_complete
+      to:
+        end: true
+    - from: completed
+      event: on_error
+      to:
+        end: true
+defaults:
+  channels: []
+  skin:
+    brand:
+      primary: "#0d9488"

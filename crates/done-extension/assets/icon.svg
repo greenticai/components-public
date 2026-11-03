@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="HTTP">
+  <title>HTTP request/response</title>
+  <!-- globe -->
+  <circle cx="12" cy="12" r="8.5"/>
+  <path d="M3.5 12h17"/>
+  <path d="M12 3.5a12 12 0 0 1 0 17"/>
+  <path d="M12 3.5a12 12 0 0 0 0 17"/>
+  <!-- request/response arrows -->
+  <path d="M4 9.5h4l-1.5-1.5"/>
+  <path d="M20 14.5h-4l1.5 1.5"/>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "extension.name": "Done @ Greentic",
+  "extension.description": "Ask a person to do something and react when they answer.",
+  "node.done.create_request.label": "Create request",
+  "node.done.read_request.label": "Read request",
+  "node.done.event.label": "Done event"
+}
