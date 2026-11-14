@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.guardrail-pii",
     "name": "PII-masking guardrail",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "Reference guardrail that masks emails/phones and denies on a configurable blocklist",
     "description": "Stateless guardrail extension. Evaluates inbound/outbound content: denies if input.context JSON contains a blocklist match, masks emails and phone numbers on update, accepts otherwise. Implements greentic:extension-design/guardrail.",
     "author": {

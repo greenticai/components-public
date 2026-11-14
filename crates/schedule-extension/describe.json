@@ -5,7 +5,7 @@
   "metadata": {
     "id": "greentic.schedule",
     "name": "Schedule Trigger",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "summary": "Start a Greentic flow on a cron schedule",
     "description": "Ships the schedule trigger nodeType (trigger contract v1: greentic-start's scheduler fires the flow when a cron expression comes due and enters it at the node after the trigger) plus three design-time tools (validate_cron, describe_schedule, suggest_cron). The schedule is parsed with the same crate the runtime schedules with, so an expression this extension accepts is one the deploy accepts.",
     "author": {

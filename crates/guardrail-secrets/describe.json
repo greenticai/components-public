@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.guardrail-secrets",
     "name": "Secrets-leak guardrail",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "Masks high-confidence secret tokens (API keys, tokens, private-key blocks) in either direction",
     "description": "Masks high-confidence secret tokens (API keys, tokens, private-key blocks) in either direction. Implements greentic:extension-design/guardrail.",
     "author": {

@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.guardrail-profanity",
     "name": "Profanity guardrail",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "Masks profane words from a built-in list plus a configurable blocklist, in either direction",
     "description": "Masks profane words from a built-in list plus a configurable blocklist, in either direction. Implements greentic:extension-design/guardrail.",
     "author": {

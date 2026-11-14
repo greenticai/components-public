@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.guardrail-topic",
     "name": "Topic / scope guardrail",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "Denies inbound messages outside an operator-configured keyword allow-list (no-op until configured)",
     "description": "Denies inbound messages outside an operator-configured keyword allow-list (no-op until configured). Implements greentic:extension-design/guardrail.",
     "author": {
