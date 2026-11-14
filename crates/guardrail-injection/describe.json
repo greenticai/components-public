@@ -10,7 +10,7 @@
   "metadata": {
     "id": "greentic.guardrail-injection",
     "name": "Prompt-injection guardrail",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "Denies inbound messages that contain known prompt-injection / jailbreak patterns",
     "description": "Stateless guardrail extension. Evaluates inbound content against a built-in list of prompt-injection / jailbreak phrases (case-insensitive) and denies on a match; accepts otherwise. Outbound content is always accepted. Implements greentic:extension-design/guardrail.",
     "author": {

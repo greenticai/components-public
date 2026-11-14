@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-guardrail-injection"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde",
@@ -865,7 +865,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-guardrail-pii"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde",
@@ -876,7 +876,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-guardrail-profanity"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde",
@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-guardrail-secrets"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde",
@@ -898,7 +898,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-guardrail-topic"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde",
@@ -1292,7 +1292,7 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 
 [[package]]
 name = "llm-generic-extension"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "wit-bindgen-rt 0.35.0",
 ]
@@ -1738,7 +1738,7 @@ dependencies = [
 
 [[package]]
 name = "schedule-extension"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -2262,7 +2262,7 @@ dependencies = [
 
 [[package]]
 name = "webhook-extension"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "serde",
  "serde_json",
