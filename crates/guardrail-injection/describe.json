@@ -25,7 +25,8 @@
       "jailbreak",
       "security",
       "design-extension"
-    ]
+    ],
+    "icon": "assets/icon.svg"
   },
   "engine": {
     "greenticDesigner": ">=1.2.0",

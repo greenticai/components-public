@@ -19,7 +19,8 @@
       "ai",
       "generic",
       "design-extension"
-    ]
+    ],
+    "icon": "assets/icon.svg"
   },
   "contributions": {
     "nodeTypes": [

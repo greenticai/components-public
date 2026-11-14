@@ -20,7 +20,8 @@
       "trigger",
       "timer",
       "design-extension"
-    ]
+    ],
+    "icon": "assets/icon.svg"
   },
   "contributions": {
     "nodeTypes": [
